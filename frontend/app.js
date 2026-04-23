@@ -2930,6 +2930,10 @@ async function submitNLGoal() {
                         }
                         // Refresh task/event panels
                         setTimeout(() => { triggerTaskDemo(); switchAgentTab('task-tab'); }, 2000);
+                        // Fire custom event so Explain Reasoning can find this workflow
+                        document.dispatchEvent(new CustomEvent('orchestra:workflow-done', {
+                            detail: { workflow_id: payload.workflow_id }
+                        }));
                     }
                 } catch (parseErr) {
                     console.warn('[NL stream] JSON parse error:', parseErr, dataLine);
@@ -3514,4 +3518,214 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
         _connectThoughtTrace();
     }, 1500);
+});
+
+// ============================================================================
+// Explain Reasoning — toggle + per-card audit panel
+// ============================================================================
+
+let _explainReasoningOn = false;
+let _currentWorkflowId  = null;   // set when a stream completes
+let _workflowReasoning  = null;   // cached fetch result
+
+function toggleExplainReasoning(on) {
+    _explainReasoningOn = on;
+    const panels = document.querySelectorAll('.activity-reasoning-panel');
+
+    if (on) {
+        // Show all panels that have data, load reasoning if we have a workflow
+        panels.forEach(p => {
+            if (p.dataset.loaded === 'true') p.classList.add('visible');
+        });
+        if (_currentWorkflowId) {
+            _loadAndInjectReasoning(_currentWorkflowId);
+        } else {
+            // Try to find latest workflow from list
+            _fetchLatestWorkflowAndInject();
+        }
+    } else {
+        panels.forEach(p => p.classList.remove('visible'));
+    }
+}
+
+async function _fetchLatestWorkflowAndInject() {
+    try {
+        const res  = await fetch('/reasoning');
+        const data = await res.json();
+        if (data.workflows && data.workflows.length > 0) {
+            const latest = data.workflows[data.workflows.length - 1];
+            _currentWorkflowId = latest.workflow_id;
+            await _loadAndInjectReasoning(latest.workflow_id);
+        }
+    } catch (e) {
+        console.warn('Could not fetch workflow list:', e);
+    }
+}
+
+async function _loadAndInjectReasoning(workflowId) {
+    if (!workflowId) return;
+    try {
+        const res  = await fetch(`/reasoning/${workflowId}`);
+        if (!res.ok) return;
+        _workflowReasoning = await res.json();
+        _injectReasoningIntoFeed(_workflowReasoning);
+    } catch (e) {
+        console.warn('Reasoning fetch failed:', e);
+    }
+}
+
+function _injectReasoningIntoFeed(reasoning) {
+    if (!reasoning) return;
+
+    const feed = document.getElementById('action-output');
+    if (!feed) return;
+
+    // Inject goal-level audit into the first info/success item
+    const goalAudit = (reasoning.auditor_reports || []).find(r => r.stage === 'goal_audit');
+    const criticGoal = (reasoning.critic_findings || []).find(f => f.stage === 'plan_review');
+
+    // Build per-step panels
+    const stepReasoningMap = {};
+    (reasoning.step_reasoning || []).forEach(sr => {
+        stepReasoningMap[sr.item_title?.toLowerCase()] = sr;
+    });
+
+    const auditMap = {};
+    (reasoning.auditor_reports || []).forEach(r => {
+        if (r.item_title) auditMap[r.item_title.toLowerCase()] = r;
+    });
+
+    // Find activity items and attach panels
+    const activityItems = feed.querySelectorAll('.activity-item');
+    activityItems.forEach(item => {
+        const msgEl = item.querySelector('.activity-message');
+        if (!msgEl) return;
+        const msgText = msgEl.textContent || '';
+
+        // Try to match this activity to a step
+        let matchedAudit = null;
+        let matchedStep  = null;
+
+        Object.keys(auditMap).forEach(titleKey => {
+            if (msgText.toLowerCase().includes(titleKey.substring(0, 20))) {
+                matchedAudit = auditMap[titleKey];
+            }
+        });
+        Object.keys(stepReasoningMap).forEach(titleKey => {
+            if (msgText.toLowerCase().includes(titleKey.substring(0, 20))) {
+                matchedStep = stepReasoningMap[titleKey];
+            }
+        });
+
+        // Also attach goal audit to the plan-approved message
+        if (!matchedAudit && goalAudit && msgText.includes('Plan approved')) {
+            matchedAudit = goalAudit;
+        }
+
+        if (matchedAudit || criticGoal) {
+            _attachReasoningPanel(item, matchedAudit, matchedStep, criticGoal);
+        }
+    });
+}
+
+function _attachReasoningPanel(activityItem, auditReport, stepReasoning, criticFinding) {
+    // Remove existing panel if any
+    const existing = activityItem.querySelector('.activity-reasoning-panel');
+    if (existing) existing.remove();
+
+    const panel = document.createElement('div');
+    panel.className = `activity-reasoning-panel${_explainReasoningOn ? ' visible' : ''}`;
+    panel.dataset.loaded = 'true';
+
+    let html = '';
+
+    // ── Critic section ────────────────────────────────────────────────────
+    if (stepReasoning?.critic || criticFinding) {
+        const c = stepReasoning?.critic || criticFinding;
+        html += `
+        <div class="reasoning-section-title">
+            <span style="color:#f87171;">🔍</span> Critic Agent Assessment
+        </div>
+        <div class="critic-finding-row">
+            <strong>Verdict:</strong> ${c.verdict || 'approved'}
+            &nbsp;·&nbsp; <strong>Confidence:</strong> ${Math.round((c.confidence || 0.9) * 100)}%
+            <br><span style="color:#888;">${c.message || c.message || 'Plan reviewed and approved'}</span>
+        </div>`;
+    }
+
+    // ── Auditor section ───────────────────────────────────────────────────
+    if (auditReport?.checks) {
+        const statusColor = {
+            'approved':    '#34d399',
+            'conditional': '#fbbf24',
+            'escalated':   '#f87171',
+            'rejected':    '#f87171',
+        }[auditReport.approval_status] || '#34d399';
+
+        html += `
+        <div class="reasoning-section-title" style="margin-top:${stepReasoning?.critic ? '10px' : '0'};">
+            <span style="color:#34d399;">🛡️</span> Auditor 5-Point Vibe Check
+        </div>
+        <div class="reasoning-verdict ${auditReport.approval_status || 'approved'}">
+            ${auditReport.approval_status === 'approved' ? '✅' : auditReport.approval_status === 'conditional' ? '⚠️' : '🚨'}
+            ${(auditReport.approval_status || 'approved').toUpperCase()}
+            &nbsp;·&nbsp; Risk: ${(auditReport.overall_risk || 'safe').toUpperCase()}
+            ${auditReport.audit_duration_ms ? `&nbsp;·&nbsp; ${auditReport.audit_duration_ms}ms` : ''}
+        </div>
+        <div class="vibe-check-grid">`;
+
+        const checkLabels = {
+            intent_alignment:       'Intent Alignment',
+            pii_safety:             'PII Safety',
+            conflict_resolution:    'Conflict Resolution',
+            risk_assessment:        'Risk Assessment',
+            alternative_validation: 'Alternative Check',
+        };
+
+        Object.entries(checkLabels).forEach(([key, label]) => {
+            const check = auditReport.checks?.[key];
+            if (!check) return;
+            html += `
+            <div class="vibe-check-row">
+                <span class="vibe-check-name">${label}</span>
+                <span class="vibe-check-status">${check.status || '✅'}</span>
+                <span class="vibe-check-detail">${check.detail || ''}</span>
+                <span class="vibe-confidence">${Math.round((check.confidence || 0) * 100)}%</span>
+            </div>`;
+        });
+
+        html += `</div>`;
+
+        if (auditReport.recommendation) {
+            html += `<div style="margin-top:8px;font-size:0.76rem;color:#666;font-style:italic;">${auditReport.recommendation}</div>`;
+        }
+
+        if (auditReport.human_review_required) {
+            html += `<div style="margin-top:6px;color:#f59e0b;font-size:0.76rem;">⚠️ Human review recommended</div>`;
+        }
+    }
+
+    if (!html) {
+        html = '<div class="reasoning-loading">No detailed reasoning available for this step.</div>';
+    }
+
+    panel.innerHTML = html;
+    activityItem.appendChild(panel);
+}
+
+// Hook into the done event — set current workflow ID so toggle can find it
+const _origRenderOrchestrationSummary = typeof renderOrchestrationSummary === 'function'
+    ? renderOrchestrationSummary : null;
+
+// Patch the done handler in submitNLGoal to store workflow_id
+document.addEventListener('DOMContentLoaded', () => {
+    // Override the done event logic by monkey-patching submitNLGoal
+    // We do this via a custom event dispatched from the stream handler
+    document.addEventListener('orchestra:workflow-done', (e) => {
+        _currentWorkflowId = e.detail.workflow_id;
+        _workflowReasoning = null;   // invalidate cache
+        if (_explainReasoningOn) {
+            setTimeout(() => _loadAndInjectReasoning(_currentWorkflowId), 800);
+        }
+    });
 });

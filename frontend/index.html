@@ -239,7 +239,16 @@
                             </div>
 
                             <div class="glass-panel main-panel mt-2">
-                                <h2><i class="fa-solid fa-activity"></i> Smart Activity Feed</h2>
+                                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:4px;">
+                                    <h2 style="margin:0;"><i class="fa-solid fa-activity"></i> Smart Activity Feed</h2>
+                                    <label class="reasoning-toggle-wrap" title="Show why each action was recommended">
+                                        <input type="checkbox" id="explain-reasoning-toggle" onchange="toggleExplainReasoning(this.checked)">
+                                        <span class="reasoning-toggle-track">
+                                            <span class="reasoning-toggle-thumb"></span>
+                                        </span>
+                                        <span class="reasoning-toggle-label"><i class="fa-solid fa-microscope"></i> Explain Reasoning</span>
+                                    </label>
+                                </div>
                                 
                                 <!-- Activity Summary Section -->
                                 <div id="activity-summary" class="activity-summary mb-3">
