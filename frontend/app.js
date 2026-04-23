@@ -3530,6 +3530,27 @@ let _workflowReasoning  = null;   // cached fetch result
 
 function toggleExplainReasoning(on) {
     _explainReasoningOn = on;
+
+    // Update inline-styled toggle visual
+    const track = document.getElementById('explain-toggle-track');
+    const thumb = document.getElementById('explain-toggle-thumb');
+    const label = document.getElementById('explain-reasoning-label');
+    if (track && thumb) {
+        if (on) {
+            track.style.background = 'rgba(79,172,254,0.3)';
+            track.style.borderColor = 'rgba(79,172,254,0.6)';
+            thumb.style.transform = 'translateX(14px)';
+            thumb.style.background = '#4facfe';
+            if (label) label.style.borderColor = 'rgba(79,172,254,0.5)';
+        } else {
+            track.style.background = 'rgba(255,255,255,0.1)';
+            track.style.borderColor = 'rgba(255,255,255,0.2)';
+            thumb.style.transform = 'translateX(0)';
+            thumb.style.background = '#888';
+            if (label) label.style.borderColor = 'rgba(79,172,254,0.25)';
+        }
+    }
+
     const panels = document.querySelectorAll('.activity-reasoning-panel');
 
     if (on) {

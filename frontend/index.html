@@ -239,14 +239,14 @@
                             </div>
 
                             <div class="glass-panel main-panel mt-2">
-                                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:4px;">
+                                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
                                     <h2 style="margin:0;"><i class="fa-solid fa-activity"></i> Smart Activity Feed</h2>
-                                    <label class="reasoning-toggle-wrap" title="Show why each action was recommended">
-                                        <input type="checkbox" id="explain-reasoning-toggle" onchange="toggleExplainReasoning(this.checked)">
-                                        <span class="reasoning-toggle-track">
-                                            <span class="reasoning-toggle-thumb"></span>
+                                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:5px 12px;background:rgba(79,172,254,0.08);border:1px solid rgba(79,172,254,0.25);border-radius:20px;transition:all 0.2s;" title="Show why each action was recommended" id="explain-reasoning-label">
+                                        <input type="checkbox" id="explain-reasoning-toggle" onchange="toggleExplainReasoning(this.checked)" style="display:none;">
+                                        <span id="explain-toggle-track" style="width:32px;height:18px;border-radius:9px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);position:relative;display:inline-block;transition:all 0.2s;flex-shrink:0;">
+                                            <span id="explain-toggle-thumb" style="position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;background:#888;transition:all 0.2s;display:block;"></span>
                                         </span>
-                                        <span class="reasoning-toggle-label"><i class="fa-solid fa-microscope"></i> Explain Reasoning</span>
+                                        <span style="font-size:0.8rem;color:rgba(79,172,254,0.8);white-space:nowrap;"><i class="fa-solid fa-microscope"></i> Explain Reasoning</span>
                                     </label>
                                 </div>
                                 
