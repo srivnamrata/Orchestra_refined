@@ -1256,6 +1256,8 @@ function displayEventCards(container, data) {
             }
         }
         
+        const evId = event.event_id || event.id || '';
+        const safeTitle = (event.title || '').replace(/'/g, "\\'");
         card.innerHTML = `
             <div class="article-card-header">
                 <div style="flex: 1;">
@@ -1271,17 +1273,21 @@ function displayEventCards(container, data) {
                 </div>
             </div>
             <div class="article-summary">
-                <strong>📆 ${dateStr}</strong>${event.location ? `<br><strong>📍 Location:</strong> ${event.location}` : ''}${event.description ? `<br><strong>📝 Details:</strong> ${event.description}` : ''}
+                <strong>📆 ${dateStr}</strong>
+                ${timeStr !== 'No time' ? `<br><i class="fa-solid fa-clock"></i> <strong>Time:</strong> ${timeStr}` : ''}
+                ${event.duration_minutes ? `<br><i class="fa-solid fa-hourglass"></i> <strong>Duration:</strong> ${event.duration_minutes} min` : ''}
+                ${event.location    ? `<br><i class="fa-solid fa-location-dot"></i> <strong>Location:</strong> ${event.location}` : ''}
+                ${event.description ? `<br><i class="fa-solid fa-note-sticky"></i> ${event.description}` : ''}
             </div>
             <div class="article-actions">
-                <button class="action-btn" onclick="editEvent('${event.event_id}', '${event.title.replace(/'/g, "\\'")}')">\
-                    <i class=\"fa-solid fa-pen\"></i> Edit
+                <button class="action-btn" onclick="editEvent('${evId}', '${safeTitle}')">
+                    <i class="fa-solid fa-pen"></i> Edit
                 </button>
-                <button class="action-btn action-btn--link" onclick="openEventDetails('${event.title}')">
+                <button class="action-btn action-btn--link" onclick="openEventDetails('${evId}', '${safeTitle}')">
                     <i class="fa-solid fa-arrow-up-right-from-square"></i> Details
                 </button>
-                <button class="action-btn action-btn--save" onclick="deleteEvent('${event.event_id}')">
-                    <i class=\"fa-solid fa-trash\"></i> Remove
+                <button class="action-btn action-btn--save" onclick="deleteEvent('${evId}')">
+                    <i class="fa-solid fa-trash"></i> Remove
                 </button>
             </div>
         `;
@@ -1546,8 +1552,23 @@ async function editEvent(eventId, eventTitle) {
     openEventModal();
 }
 
-function openEventDetails(eventTitle) {
-    appendLog(`📋 Opening event details: "${eventTitle}"`, 'info');
+function openEventDetails(eventId, eventTitle) {
+    appendLog(`📋 Event details: "${eventTitle}"`, 'info');
+    // Fetch and show full details
+    fetch(`/api/events/${eventId}`)
+        .then(r => r.json())
+        .then(data => {
+            const ev = data.event || data;
+            const start = ev.start_time ? new Date(ev.start_time).toLocaleString('en-IN') : 'Not set';
+            const end   = ev.end_time   ? new Date(ev.end_time).toLocaleString('en-IN')   : 'Not set';
+            appendLog(`📅 <strong>${ev.title}</strong>`, 'info');
+            appendLog(`🕐 Start: ${start}`, 'info');
+            appendLog(`🕐 End:   ${end}`, 'info');
+            if (ev.location)    appendLog(`📍 Location: ${ev.location}`, 'info');
+            if (ev.description) appendLog(`📝 ${ev.description}`, 'info');
+            if (ev.duration_minutes) appendLog(`⏱️ Duration: ${ev.duration_minutes} min`, 'info');
+        })
+        .catch(() => appendLog(`ℹ️ ${eventTitle}`, 'info'));
 }
 
 async function deleteEvent(eventId) {
@@ -2466,51 +2487,54 @@ async function triggerSchedulerDemo() {
     appendLog('📅 Fetching your calendar events...', 'info');
     
     try {
-        // Fetch upcoming events from database
-        const eventsRes = await fetch('/api/events/upcoming/30');
+        // Fetch ALL events (not just upcoming) so we never miss any
+        const eventsRes = await fetch('/api/events?limit=100');
+        if (!eventsRes.ok) {
+            const err = await eventsRes.json().catch(() => ({}));
+            appendLog(`❌ Error loading events: ${err.detail || eventsRes.status}`, 'error');
+            return;
+        }
         const eventsData = await eventsRes.json();
         
-        // Show stored events if any
         if (eventsData.events && eventsData.events.length > 0) {
-            appendLog(`✅ Found ${eventsData.count} upcoming event(s) in the next 30 days`, 'success');
+            appendLog(`✅ Found ${eventsData.count} event(s)`, 'success');
             
-            // Format events for right panel display
-            const eventList = eventsData.events.map((event, index) => ({
-                id: `event-${index}`,
-                title: event.title,
-                content: `${new Date(event.start_time).toLocaleDateString()} at ${new Date(event.start_time).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}${event.location ? ' | ' + event.location : ''}`
+            // Pass the FULL event objects through — displayEventCards needs start_time, event_id etc
+            const eventList = eventsData.events.map(event => ({
+                event_id:    event.event_id,
+                id:          event.event_id,   // alias for compatibility
+                title:       event.title,
+                start_time:  event.start_time,
+                end_time:    event.end_time,
+                location:    event.location,
+                description: event.description,
+                duration_minutes: event.duration_minutes,
+                content: event.start_time
+                    ? `${new Date(event.start_time).toLocaleDateString('en-IN', {day:'numeric',month:'short',year:'numeric'})} at ${new Date(event.start_time).toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit'})}${event.location ? ' | ' + event.location : ''}`
+                    : 'No date set'
             }));
             
-            // Display all events in right panel
-            displayAgentContent('scheduler', `📅 Your Calendar (${eventsData.count} upcoming)`, 'fa-calendar', {
+            displayAgentContent('scheduler', `📅 Your Calendar (${eventsData.count} events)`, 'fa-calendar', {
                 events: eventList,
                 total_count: eventsData.count,
                 event_summary: eventList.map((e, i) => `${i + 1}. ${e.title}`)
             });
             
-            // Also show detailed info in console
             eventsData.events.forEach((event, index) => {
-                appendLog(`  ${index + 1}. ${event.title}`, 'info');
-                appendLog(`     📅 ${new Date(event.start_time).toLocaleString()}`, 'info');
-                if (event.location) {
-                    appendLog(`     📍 ${event.location}`, 'info');
-                }
+                const dt = event.start_time ? new Date(event.start_time).toLocaleString('en-IN') : 'No date';
+                appendLog(`  ${index + 1}. ${event.title} — ${dt}`, 'info');
             });
         } else {
-            appendLog('No upcoming events in the next 30 days. Click "Schedule New Event" to add one!', 'info');
-            
-            // Display empty state in right panel
+            appendLog('No events yet. Use the Orchestrator or click "Schedule New Event"!', 'info');
             displayAgentContent('scheduler', '📅 Your Calendar (Empty)', 'fa-calendar', {
                 status: 'empty',
-                message: 'No upcoming events',
+                message: 'No events scheduled yet',
                 next_action: 'Click "Schedule New Event" to get started'
             });
         }
     } catch (e) {
         appendLog('Error fetching events: ' + e.message, 'error');
-        displayAgentContent('scheduler', '⚠️ Error Loading Events', 'fa-exclamation', {
-            error: e.message
-        });
+        displayAgentContent('scheduler', '⚠️ Error Loading Events', 'fa-exclamation', { error: e.message });
     }
 }
 

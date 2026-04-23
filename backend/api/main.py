@@ -1918,10 +1918,12 @@ async def list_events(limit: int = 100, offset: int = 0, upcoming_only: bool = F
                 {
                     "event_id": event.event_id,
                     "title": event.title,
-                    "start_time": event.start_time.isoformat(),
-                    "end_time": event.end_time.isoformat(),
+                    "description": event.description,
+                    "start_time": event.start_time.isoformat() if event.start_time else None,
+                    "end_time": event.end_time.isoformat() if event.end_time else None,
                     "location": event.location,
                     "duration_minutes": event.duration_minutes,
+                    "status": event.status,
                     "created_at": event.created_at.isoformat()
                 }
                 for event in events
