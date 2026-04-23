@@ -103,6 +103,10 @@
                     <button class="nav-tab" data-target="debates" onclick="switchView('debates')">
                         <i class="fa-solid fa-people-arrows"></i> Debates
                     </button>
+                    <button class="nav-tab" data-target="reasoning" onclick="switchView('reasoning')">
+                        <i class="fa-solid fa-brain"></i> Agent Reasoning
+                        <span class="notif-badge" id="notif-badge" style="display:none;">0</span>
+                    </button>
                 </div>
             </nav>
 
@@ -438,6 +442,107 @@
                         <h2><i class="fa-solid fa-comments"></i> Live Agent Debates</h2>
                         <div class="debate-container" id="debate-container">
                             <div class="empty-state">No active debates. Trigger one from the Dashboard!</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Agent Reasoning View -->
+                <div id="reasoning" class="view">
+                    <div class="reasoning-layout">
+
+                        <!-- Left: Live thought stream -->
+                        <div class="glass-panel main-panel reasoning-stream-panel">
+                            <div class="reasoning-header">
+                                <h2><i class="fa-solid fa-brain"></i> Live Agent Reasoning</h2>
+                                <div class="reasoning-controls">
+                                    <div class="monitor-status" id="monitor-status">
+                                        <span class="status-dot" id="monitor-dot"></span>
+                                        <span id="monitor-status-text">Idle</span>
+                                    </div>
+                                    <button class="btn btn-primary btn-small" onclick="startReasoningStream()">
+                                        <i class="fa-solid fa-play"></i> Run Scan
+                                    </button>
+                                    <button class="btn btn-secondary btn-small" onclick="clearReasoningFeed()">
+                                        <i class="fa-solid fa-trash"></i> Clear
+                                    </button>
+                                </div>
+                            </div>
+                            <p style="color:#888;font-size:0.85rem;margin:0 0 12px;">
+                                Watch agents think in real time — cross-referencing your tasks, calendar, GitHub, Slack and email to surface bottlenecks before you notice them.
+                            </p>
+                            <div id="reasoning-feed" class="reasoning-feed">
+                                <div class="reasoning-placeholder">
+                                    <i class="fa-solid fa-brain" style="font-size:2rem;opacity:0.2;"></i>
+                                    <p>Click "Run Scan" to watch agents reason through your data…</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right: Notifications -->
+                        <div class="reasoning-right">
+                            <div class="glass-panel main-panel notifications-panel">
+                                <h2><i class="fa-solid fa-bell"></i> Silent Bottlenecks</h2>
+                                <p style="color:#888;font-size:0.85rem;margin:0 0 12px;">
+                                    Issues the agents found proactively — without you asking.
+                                </p>
+                                <div id="notifications-list">
+                                    <div class="empty-state">No bottlenecks detected yet. Run a scan!</div>
+                                </div>
+                            </div>
+
+                            <div class="glass-panel main-panel mt-2">
+                                <h2><i class="fa-solid fa-sitemap"></i> Agent Network</h2>
+                                <div class="agent-network-list" id="agent-network-list">
+                                    <div class="agent-node" data-agent="orchestrator">
+                                        <span class="agent-node-icon">🎯</span>
+                                        <div class="agent-node-info">
+                                            <strong>Orchestrator</strong>
+                                            <span>Coordinates scan</span>
+                                        </div>
+                                        <span class="agent-node-status idle">idle</span>
+                                    </div>
+                                    <div class="agent-node" data-agent="critic">
+                                        <span class="agent-node-icon">🔍</span>
+                                        <div class="agent-node-info">
+                                            <strong>Critic</strong>
+                                            <span>Detects bottlenecks</span>
+                                        </div>
+                                        <span class="agent-node-status idle">idle</span>
+                                    </div>
+                                    <div class="agent-node" data-agent="auditor">
+                                        <span class="agent-node-icon">🛡️</span>
+                                        <div class="agent-node-info">
+                                            <strong>Auditor</strong>
+                                            <span>Validates actions</span>
+                                        </div>
+                                        <span class="agent-node-status idle">idle</span>
+                                    </div>
+                                    <div class="agent-node" data-agent="github">
+                                        <span class="agent-node-icon">🐙</span>
+                                        <div class="agent-node-info">
+                                            <strong>GitHub</strong>
+                                            <span>PR & CI signals</span>
+                                        </div>
+                                        <span class="agent-node-status stub">stub</span>
+                                    </div>
+                                    <div class="agent-node" data-agent="slack">
+                                        <span class="agent-node-icon">💬</span>
+                                        <div class="agent-node-info">
+                                            <strong>Slack</strong>
+                                            <span>Unread mentions</span>
+                                        </div>
+                                        <span class="agent-node-status stub">stub</span>
+                                    </div>
+                                    <div class="agent-node" data-agent="email">
+                                        <span class="agent-node-icon">📧</span>
+                                        <div class="agent-node-info">
+                                            <strong>Email</strong>
+                                            <span>Awaiting replies</span>
+                                        </div>
+                                        <span class="agent-node-status stub">stub</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

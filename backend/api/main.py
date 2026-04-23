@@ -21,6 +21,7 @@ from backend.agents.critic_agent import CriticAgent
 from backend.agents.auditor_agent import AuditorAgent
 from backend.agents.debate_engine import MultiAgentDebateEngine, DebateParticipant
 from backend.agents.research_agent import ResearchAgent
+from backend.agents.proactive_monitor_agent import ProactiveMonitorAgent
 from backend.agents.news_agent import NewsAgent
 from backend.services.llm_service import create_llm_service
 from backend.services.knowledge_graph_service import KnowledgeGraphService
@@ -81,6 +82,11 @@ knowledge_graph = KnowledgeGraphService(firestore_client=firestore_client)
 critic_agent = CriticAgent(llm_service, knowledge_graph, pubsub_service)
 security_auditor = AuditorAgent(llm_service, knowledge_graph)
 orchestrator = OrchestratorAgent(llm_service, critic_agent, knowledge_graph, pubsub_service)
+
+# Proactive Monitor — starts its own background scan loop on startup
+proactive_monitor = ProactiveMonitorAgent(
+    llm_service, critic_agent, security_auditor, knowledge_graph, pubsub_service
+)
 
 # Register sub-agents (scheduler, task executor, etc.)
 # These would be actual agent implementations
@@ -160,6 +166,10 @@ async def startup_event():
         logger.info("✅ Database initialized successfully")
     except Exception as e:
         logger.warning(f"⚠️ Database initialization warning: {e}")
+
+    # Start proactive monitor background loop
+    proactive_monitor.start()
+    logger.info("✅ Proactive Monitor Agent started")
 
 
 @app.get("/", include_in_schema=False)
@@ -646,6 +656,64 @@ async def orchestrate_stream(request: OrchestrateRequest):
             "X-Accel-Buffering": "no",
         }
     )
+
+
+# ============================================================================
+# Proactive Monitor — Reasoning Stream + Notifications
+# ============================================================================
+
+@app.get("/agent/reasoning/stream", tags=["Proactive Monitor"])
+async def agent_reasoning_stream():
+    """
+    SSE stream of live agent reasoning from the Proactive Monitor.
+    Connect from the frontend via EventSource to see thoughts in real time.
+    """
+    return StreamingResponse(
+        proactive_monitor.reasoning_stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+@app.post("/agent/monitor/scan", tags=["Proactive Monitor"])
+async def trigger_manual_scan():
+    """Trigger an immediate proactive scan (on-demand)."""
+    asyncio.create_task(proactive_monitor.run_scan())
+    return {"status": "scan_started", "message": "Proactive scan triggered"}
+
+
+@app.get("/agent/monitor/notifications", tags=["Proactive Monitor"])
+async def get_notifications():
+    """Get current notifications from the proactive monitor."""
+    return {
+        "status": "success",
+        "count": len(proactive_monitor.notifications),
+        "last_scan_at": proactive_monitor.last_scan_at,
+        "scan_count": proactive_monitor.scan_count,
+        "notifications": proactive_monitor.notifications,
+    }
+
+
+@app.delete("/agent/monitor/notifications/{notif_id}", tags=["Proactive Monitor"])
+async def dismiss_notification(notif_id: str):
+    """Dismiss a notification by ID."""
+    proactive_monitor.notifications = [
+        n for n in proactive_monitor.notifications if n.get("id") != notif_id
+    ]
+    return {"status": "dismissed", "id": notif_id}
+
+
+@app.get("/agent/monitor/status", tags=["Proactive Monitor"])
+async def monitor_status():
+    """Get the current status of the proactive monitor."""
+    return {
+        "running": proactive_monitor._running,
+        "scan_count": proactive_monitor.scan_count,
+        "last_scan_at": proactive_monitor.last_scan_at,
+        "pending_notifications": len(proactive_monitor.notifications),
+        "agents_used": ["ProactiveMonitorAgent", "CriticAgent", "AuditorAgent",
+                        "SchedulerAgent", "TaskAgent"],
+    }
 
 
 @app.post("/demonstrate-critic-agent", tags=["Demo"])

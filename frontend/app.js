@@ -3177,3 +3177,199 @@ function renderOrchestrationSummary(payload) {
     `;
     feedDiv.prepend(card);
 }
+
+// ============================================================================
+// Agent Reasoning Panel — Proactive Monitor SSE Consumer
+// ============================================================================
+
+let _reasoningEventSource = null;
+
+const agentColors = {
+    orchestrator: "badge-orchestrator",
+    critic:       "badge-critic",
+    auditor:      "badge-auditor",
+    knowledge:    "badge-knowledge",
+};
+
+function startReasoningStream() {
+    const feed   = document.getElementById('reasoning-feed');
+    const dot    = document.getElementById('monitor-dot');
+    const status = document.getElementById('monitor-status-text');
+
+    if (!feed) return;
+
+    // Close any existing stream
+    if (_reasoningEventSource) {
+        _reasoningEventSource.close();
+        _reasoningEventSource = null;
+    }
+
+    feed.innerHTML = '';   // clear placeholder
+    dot.className  = 'status-dot scanning';
+    status.textContent = 'Scanning…';
+    _setAllAgentsStatus('idle');
+
+    _reasoningEventSource = new EventSource('/agent/reasoning/stream');
+
+    _reasoningEventSource.addEventListener('reasoning', (e) => {
+        try {
+            const payload = JSON.parse(e.data);
+            _appendThought(payload);
+            _activateAgent(payload.agent);
+        } catch (_) {}
+    });
+
+    _reasoningEventSource.addEventListener('done', (e) => {
+        try {
+            const payload = JSON.parse(e.data);
+            dot.className  = 'status-dot complete';
+            status.textContent = `Scan complete — ${payload.notifications} alert(s)`;
+            _setAllAgentsStatus('done');
+            // Refresh notifications panel
+            setTimeout(loadNotifications, 500);
+        } catch (_) {}
+        _reasoningEventSource.close();
+        _reasoningEventSource = null;
+    });
+
+    _reasoningEventSource.addEventListener('ping', () => {});
+
+    _reasoningEventSource.onerror = () => {
+        dot.className  = 'status-dot error';
+        status.textContent = 'Connection lost';
+        _reasoningEventSource.close();
+        _reasoningEventSource = null;
+    };
+}
+
+function _appendThought(payload) {
+    const feed = document.getElementById('reasoning-feed');
+    if (!feed) return;
+
+    const typeMap = {
+        thought:       { label: payload.agent, cls: 'type-thought' },
+        finding:       { label: payload.agent, cls: 'type-finding' },
+        alert:         { label: payload.agent, cls: 'type-alert'   },
+        action:        { label: payload.agent, cls: 'type-action'  },
+        scan_complete: { label: 'done',        cls: 'type-finding' },
+    };
+    const meta = typeMap[payload.type] || typeMap.thought;
+    const badgeCls = agentColors[payload.agent] || 'badge-orchestrator';
+
+    const el = document.createElement('div');
+    el.className = `thought-item ${meta.cls}`;
+    el.innerHTML = `
+        <span class="thought-agent-badge ${badgeCls}">${meta.label}</span>
+        <span class="thought-message">${payload.message}</span>
+        <span class="thought-ts">${payload.ts || ''}</span>
+    `;
+    feed.appendChild(el);
+    feed.scrollTop = feed.scrollHeight;
+}
+
+function _activateAgent(agentName) {
+    // Map agent name to data-agent attribute
+    const map = {
+        orchestrator: 'orchestrator',
+        critic:       'critic',
+        auditor:      'auditor',
+        knowledge:    'knowledge',
+    };
+    const key = map[agentName];
+    if (!key) return;
+    document.querySelectorAll('.agent-node').forEach(n => {
+        if (n.dataset.agent === key) {
+            n.classList.add('active');
+            const statusEl = n.querySelector('.agent-node-status');
+            if (statusEl) { statusEl.className = 'agent-node-status active'; statusEl.textContent = 'active'; }
+        }
+    });
+}
+
+function _setAllAgentsStatus(status) {
+    document.querySelectorAll('.agent-node').forEach(n => {
+        const statusEl = n.querySelector('.agent-node-status');
+        if (!statusEl) return;
+        if (statusEl.classList.contains('stub')) return;  // don't override stub connectors
+        statusEl.className = `agent-node-status ${status}`;
+        statusEl.textContent = status;
+        n.classList.remove('active');
+    });
+}
+
+function clearReasoningFeed() {
+    const feed = document.getElementById('reasoning-feed');
+    if (feed) feed.innerHTML = '<div class="reasoning-placeholder"><i class="fa-solid fa-brain" style="font-size:2rem;opacity:0.2;"></i><p>Click "Run Scan" to watch agents reason…</p></div>';
+    const dot = document.getElementById('monitor-dot');
+    const status = document.getElementById('monitor-status-text');
+    if (dot) dot.className = 'status-dot';
+    if (status) status.textContent = 'Idle';
+    _setAllAgentsStatus('idle');
+}
+
+async function loadNotifications() {
+    try {
+        const res  = await fetch('/agent/monitor/notifications');
+        const data = await res.json();
+        renderNotifications(data.notifications || []);
+    } catch (_) {}
+}
+
+function renderNotifications(notifications) {
+    const list  = document.getElementById('notifications-list');
+    const badge = document.getElementById('notif-badge');
+    if (!list) return;
+
+    if (!notifications.length) {
+        list.innerHTML = '<div class="empty-state">No bottlenecks detected. Run a scan!</div>';
+        if (badge) badge.style.display = 'none';
+        return;
+    }
+
+    // Update badge
+    if (badge) {
+        badge.textContent = notifications.length;
+        badge.style.display = 'inline-flex';
+    }
+
+    list.innerHTML = '';
+    notifications.forEach(n => {
+        const card = document.createElement('div');
+        card.className = `notif-card severity-${n.severity || 'medium'}`;
+        const severityIcon = n.severity === 'high' ? '🚨' : n.severity === 'medium' ? '⚠️' : 'ℹ️';
+        const actionsHtml = (n.actions || []).map(a =>
+            `<div class="notif-action-item"><i class="fa-solid fa-arrow-right" style="font-size:0.65rem;"></i> ${a}</div>`
+        ).join('');
+
+        card.innerHTML = `
+            <div class="notif-title">
+                <span>${severityIcon} ${n.title}</span>
+                <button class="notif-dismiss" onclick="dismissNotification('${n.id}')" title="Dismiss">✕</button>
+            </div>
+            <div class="notif-message">${n.message}</div>
+            ${actionsHtml ? `<div class="notif-actions">${actionsHtml}</div>` : ''}
+        `;
+        list.appendChild(card);
+    });
+}
+
+async function dismissNotification(notifId) {
+    await fetch(`/agent/monitor/notifications/${notifId}`, { method: 'DELETE' });
+    loadNotifications();
+}
+
+// Load notifications when switching to reasoning tab
+const _origSwitchView = typeof switchView === 'function' ? switchView : null;
+// Hook into tab switching to auto-load notifications
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+        // Poll for new notifications every 5 min when the tab is active
+        loadNotifications();
+        setInterval(() => {
+            const tab = document.getElementById('reasoning');
+            if (tab && tab.classList.contains('active')) {
+                loadNotifications();
+            }
+        }, 300000);
+    }, 2000);
+});

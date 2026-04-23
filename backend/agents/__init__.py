@@ -7,6 +7,7 @@ from .scheduler_agent import SchedulerAgent
 from .critic_agent import CriticAgent
 from .auditor_agent import AuditorAgent
 from .knowledge_agent import KnowledgeAgent
+from .proactive_monitor_agent import ProactiveMonitorAgent
 
 __all__ = [
     'OrchestratorAgent',
@@ -18,4 +19,5 @@ __all__ = [
     'CriticAgent',
     'AuditorAgent',
     'KnowledgeAgent',
+    'ProactiveMonitorAgent',
 ]
