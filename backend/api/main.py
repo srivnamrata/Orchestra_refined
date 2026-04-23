@@ -228,6 +228,31 @@ async def debug_db():
         return {"error": str(e), "traceback": traceback.format_exc(), "engine": db_url_display}
 
 
+@app.post("/api/debug/test-write", tags=["Health"])
+async def debug_test_write():
+    """Test endpoint: writes a task directly to DB and reads it back"""
+    import traceback
+    from backend.database import create_task_in_db, get_task_by_id
+    test_id = f"test-{uuid.uuid4().hex[:6]}"
+    try:
+        task = create_task_in_db(
+            task_id=test_id,
+            title="[DEBUG] Test task",
+            description="Written by /api/debug/test-write",
+            priority="low",
+            source="debug"
+        )
+        readback = get_task_by_id(test_id)
+        return {
+            "write": "success",
+            "task_id": task.task_id,
+            "title": task.title,
+            "readback": readback.title if readback else "NOT FOUND — write/read mismatch!"
+        }
+    except Exception as e:
+        return {"write": "failed", "error": str(e), "traceback": traceback.format_exc()}
+
+
 @app.get("/health", tags=["Health"])
 async def health_check():
     """Fast health check endpoint (no DB calls)"""
@@ -447,11 +472,13 @@ Respond ONLY with a valid JSON array, no markdown fences:
     try:
         plan_raw = await llm_service.call(plan_prompt)
         plan_raw = plan_raw.strip()
+        logger.info(f"🤖 LLM raw response: {plan_raw[:500]}")
         # Strip markdown fences
         if plan_raw.startswith("```"):
             plan_raw = plan_raw.split("\n", 1)[1] if "\n" in plan_raw else plan_raw
             plan_raw = plan_raw.rsplit("```", 1)[0]
         steps = json.loads(plan_raw.strip())
+        logger.info(f"📋 Parsed {len(steps)} steps: {[s.get('agent') for s in steps]}")
     except Exception as e:
         logger.warning(f"LLM plan parse failed ({e}), using heuristic plan")
         next_month = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
