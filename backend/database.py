@@ -46,7 +46,7 @@ def _build_engine():
                 "postgresql+pg8000://",
                 creator=_get_conn,
                 poolclass=QueuePool,
-                pool_size=2, max_overflow=4,
+                pool_size=1, max_overflow=2,
                 pool_timeout=30, pool_recycle=1800,
                 pool_pre_ping=True, echo=False,
             )
@@ -63,7 +63,7 @@ def _build_engine():
         eng = create_engine(
             url,
             poolclass=QueuePool,
-            pool_size=2, max_overflow=4,
+            pool_size=1, max_overflow=2,
             pool_timeout=30, pool_recycle=1800,
             pool_pre_ping=True, echo=False,
         )

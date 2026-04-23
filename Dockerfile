@@ -55,4 +55,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
 # ✅ Correct Cloud Run startup command
 # Uses sh -c so $PORT is expanded correctly
 # ============================================================
-CMD ["sh", "-c", "uvicorn backend.api.main:app --host 0.0.0.0 --port ${PORT} --workers 4 --timeout-keep-alive 30 --access-log"]
+CMD ["sh", "-c", "uvicorn backend.api.main:app --host 0.0.0.0 --port ${PORT} --workers 1 --timeout-keep-alive 75 --access-log"]

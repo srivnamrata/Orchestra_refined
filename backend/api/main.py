@@ -199,19 +199,33 @@ async def root_info():
 
 @app.get("/api/debug/db", tags=["Health"])
 async def debug_db():
-    """Debug endpoint: shows DB path, task count, and last 5 tasks"""
-    from backend.database import DB_URL, get_all_tasks
+    """Debug endpoint: shows DB config, task count, and last 5 tasks"""
     import os
+    from backend.database import (
+        CLOUD_SQL_CONNECTION_NAME, DATABASE_URL, DB_NAME,
+        DB_USER, get_all_tasks, engine
+    )
+    db_url_display = str(engine.url)
     try:
         tasks = get_all_tasks(limit=5)
+        is_sqlite = "sqlite" in db_url_display
         return {
-            "db_url": DB_URL,
-            "db_file_exists": os.path.exists(DB_URL.replace("sqlite:////", "/")),
+            "engine": db_url_display,
+            "cloud_sql_connection": CLOUD_SQL_CONNECTION_NAME or "not set",
+            "database_url_env": DATABASE_URL or "not set",
+            "db_name": DB_NAME,
+            "db_type": "sqlite" if is_sqlite else "postgresql",
+            "db_file_exists": os.path.exists("/tmp/productivity.db") if is_sqlite else "n/a",
             "task_count": len(tasks),
-            "last_5_tasks": [{"id": t.task_id, "title": t.title, "priority": t.priority, "created_at": t.created_at.isoformat()} for t in tasks]
+            "last_5_tasks": [
+                {"id": t.task_id, "title": t.title, "priority": t.priority,
+                 "created_at": t.created_at.isoformat()}
+                for t in tasks
+            ]
         }
     except Exception as e:
-        return {"error": str(e), "db_url": DB_URL}
+        import traceback
+        return {"error": str(e), "traceback": traceback.format_exc(), "engine": db_url_display}
 
 
 @app.get("/health", tags=["Health"])
