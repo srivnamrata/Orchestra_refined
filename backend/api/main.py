@@ -844,22 +844,13 @@ async def thought_trace_stream():
     async def generate():
         try:
             # Send any buffered recent thoughts immediately on connect
-            yield f"event: connected
-data: {{"status": "connected"}}
-
-"
+            yield "event: connected\ndata: {\"status\": \"connected\"}\n\n"
             while True:
                 try:
                     event = await asyncio.wait_for(client_q.get(), timeout=15.0)
-                    yield f"event: thought
-data: {json.dumps(event)}
-
-"
+                    yield f"event: thought\ndata: {json.dumps(event)}\n\n"
                 except asyncio.TimeoutError:
-                    yield "event: ping
-data: {}
-
-"   # keep-alive
+                    yield "event: ping\ndata: {}\n\n"   # keep-alive
         except asyncio.CancelledError:
             pass
         finally:
