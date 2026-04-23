@@ -146,7 +146,42 @@
                         <div class="left-column">
                             <div class="glass-panel main-panel">
                                 <h2><i class="fa-solid fa-wand-magic-sparkles"></i> New Action Request</h2>
-                                <p>Submit a goal to the Orchestrator, or trigger a debate scenario.</p>
+                                <p>Submit a goal to the Orchestrator, or trigger a demo scenario.</p>
+
+                                <!-- ── Natural Language Orchestrator Input ── -->
+                                <div class="nl-orchestrator-wrap">
+                                    <div class="nl-input-row">
+                                        <div class="nl-icon-pulse" id="nl-icon-pulse">
+                                            <i class="fa-solid fa-microchip-ai"></i>
+                                        </div>
+                                        <textarea
+                                            id="nl-goal-input"
+                                            class="nl-goal-textarea"
+                                            placeholder="Tell the Orchestrator what you want to achieve… e.g. 'Plan a product launch for next month' or 'Research recent AI breakthroughs and create a summary task'"
+                                            rows="2"
+                                            onkeydown="nlOrchestratorKeydown(event)"
+                                        ></textarea>
+                                        <div class="nl-input-controls">
+                                            <select id="nl-priority" class="nl-priority-select">
+                                                <option value="low">Low</option>
+                                                <option value="medium" selected>Medium</option>
+                                                <option value="high">High</option>
+                                                <option value="critical">Critical</option>
+                                            </select>
+                                            <button class="btn btn-primary nl-submit-btn" id="nl-submit-btn" onclick="submitNLGoal()">
+                                                <i class="fa-solid fa-paper-plane"></i> <span>Run</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="nl-hint-row">
+                                        <span class="nl-hint"><i class="fa-solid fa-keyboard"></i> Ctrl+Enter to submit</span>
+                                        <div class="nl-quick-prompts">
+                                            <button class="nl-quick" onclick="setNLGoal('Research latest AI trends and summarise findings')">AI Research</button>
+                                            <button class="nl-quick" onclick="setNLGoal('Plan my week: review tasks, schedule focus blocks, flag overdue items')">Week Planning</button>
+                                            <button class="nl-quick" onclick="setNLGoal('Fetch top news headlines and create a briefing note')">News Briefing</button>
+                                        </div>
+                                    </div>
+                                </div>
 
                                 <div class="action-buttons">
                                     <button class="btn btn-primary" onclick="triggerCriticDemo()">

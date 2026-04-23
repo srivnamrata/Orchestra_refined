@@ -1844,3 +1844,163 @@ body {
 .quick-action-btn i {
     font-size: 0.95rem;
 }
+
+/* ── Natural Language Orchestrator Input ─────────────────────────────────── */
+
+.nl-orchestrator-wrap {
+    margin-bottom: 20px;
+    background: rgba(79, 172, 254, 0.06);
+    border: 1px solid rgba(79, 172, 254, 0.25);
+    border-radius: 14px;
+    padding: 14px 16px 10px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.nl-orchestrator-wrap:focus-within {
+    border-color: rgba(79, 172, 254, 0.55);
+    box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.12), 0 4px 24px rgba(79, 172, 254, 0.15);
+}
+
+.nl-input-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+}
+
+.nl-icon-pulse {
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(79, 172, 254, 0.25), rgba(118, 75, 162, 0.25));
+    border: 1px solid rgba(79, 172, 254, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.95rem;
+    color: var(--primary);
+    margin-top: 3px;
+    transition: all 0.3s;
+}
+
+.nl-icon-pulse.running {
+    animation: nlPulse 1.2s ease-in-out infinite;
+    background: linear-gradient(135deg, rgba(79, 172, 254, 0.4), rgba(118, 75, 162, 0.4));
+    border-color: var(--primary);
+}
+
+@keyframes nlPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(79, 172, 254, 0.5); }
+    50%       { box-shadow: 0 0 0 8px rgba(79, 172, 254, 0); }
+}
+
+.nl-goal-textarea {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text-primary);
+    font-family: 'Inter', sans-serif;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    resize: none;
+    padding: 4px 0;
+    min-height: 44px;
+    max-height: 120px;
+    overflow-y: auto;
+}
+
+.nl-goal-textarea::placeholder {
+    color: rgba(200, 200, 220, 0.4);
+    font-style: italic;
+}
+
+.nl-input-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: flex-end;
+}
+
+.nl-priority-select {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(79, 172, 254, 0.3);
+    border-radius: 8px;
+    color: var(--text-secondary);
+    font-size: 0.78rem;
+    padding: 4px 8px;
+    cursor: pointer;
+    outline: none;
+    font-family: 'Inter', sans-serif;
+}
+
+.nl-submit-btn {
+    padding: 8px 16px !important;
+    font-size: 0.88rem !important;
+    white-space: nowrap;
+    min-width: 74px;
+}
+
+.nl-submit-btn.loading {
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+.nl-hint-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 8px;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.nl-hint {
+    font-size: 0.75rem;
+    color: rgba(200, 200, 220, 0.35);
+}
+
+.nl-quick-prompts {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.nl-quick {
+    background: rgba(79, 172, 254, 0.1);
+    border: 1px solid rgba(79, 172, 254, 0.2);
+    border-radius: 20px;
+    color: rgba(79, 172, 254, 0.8);
+    font-size: 0.73rem;
+    padding: 3px 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'Inter', sans-serif;
+}
+
+.nl-quick:hover {
+    background: rgba(79, 172, 254, 0.2);
+    border-color: rgba(79, 172, 254, 0.45);
+    color: var(--primary);
+}
+
+/* Streaming activity — typewriter shimmer on 'thinking' items */
+.activity-item.type-thinking .activity-message {
+    opacity: 0.75;
+    animation: shimmerThink 1.5s ease-in-out infinite;
+}
+
+@keyframes shimmerThink {
+    0%, 100% { opacity: 0.65; }
+    50%       { opacity: 1; }
+}
+
+/* Slide-in for new streamed activity items */
+.activity-item.stream-new {
+    animation: streamSlideIn 0.35s ease-out forwards;
+}
+
+@keyframes streamSlideIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to   { opacity: 1; transform: translateY(0); }
+}

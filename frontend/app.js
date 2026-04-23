@@ -2694,3 +2694,178 @@ function exportContext() {
 
 
 
+
+// ============================================================================
+// Natural Language Orchestrator — Streaming SSE Handler
+// ============================================================================
+
+// Extend activityFeed with a stream-aware logger that accepts pre-computed
+// category/type from the backend event rather than re-guessing them.
+activityFeed.logStream = function(message, type, category) {
+    const timestamp = new Date().toLocaleTimeString();
+    const activity = {
+        id: Date.now() + Math.random(),
+        message: message,
+        type: type || 'info',
+        category: category || 'all',
+        timestamp: timestamp,
+        pinned: false,
+        _streamNew: true          // flag to trigger CSS slide-in
+    };
+
+    this.allActivities.unshift(activity);
+    if (this.allActivities.length > 100) this.allActivities.pop();
+
+    // Prepend the element directly (faster than full re-render)
+    const feedDiv = document.getElementById('action-output');
+    if (feedDiv) {
+        // Clear placeholder if present
+        const placeholder = feedDiv.querySelector('.console-placeholder');
+        if (placeholder) placeholder.remove();
+
+        const el = this.createActivityElement(activity);
+        el.classList.add('stream-new');
+        feedDiv.prepend(el);
+    }
+
+    this.updateSummary();
+};
+
+let _nlActiveStream = null;   // holds the AbortController for the current stream
+
+async function submitNLGoal() {
+    const textarea = document.getElementById('nl-goal-input');
+    const priorityEl = document.getElementById('nl-priority');
+    const submitBtn  = document.getElementById('nl-submit-btn');
+    const iconPulse  = document.getElementById('nl-icon-pulse');
+
+    const goal = (textarea.value || '').trim();
+    if (!goal) {
+        textarea.focus();
+        return;
+    }
+
+    // Abort any in-flight stream
+    if (_nlActiveStream) {
+        _nlActiveStream.abort();
+        _nlActiveStream = null;
+    }
+
+    // UI — loading state
+    submitBtn.classList.add('loading');
+    submitBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> <span>Running…</span>';
+    iconPulse.classList.add('running');
+    textarea.disabled = true;
+
+    const controller = new AbortController();
+    _nlActiveStream = controller;
+
+    try {
+        const res = await fetch('/orchestrate/stream', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ goal, priority: priorityEl.value }),
+            signal: controller.signal
+        });
+
+        if (!res.ok) {
+            throw new Error(`Server error ${res.status}`);
+        }
+
+        const reader  = res.body.getReader();
+        const decoder = new TextDecoder();
+        let   buffer  = '';
+
+        while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+
+            // Process complete SSE frames (split on double newline)
+            const frames = buffer.split(/\n\n/);
+            buffer = frames.pop();   // last chunk may be incomplete
+
+            for (const frame of frames) {
+                if (!frame.trim()) continue;
+
+                let eventName = 'activity';
+                let dataLine  = '';
+
+                for (const line of frame.split('\n')) {
+                    if (line.startsWith('event:')) eventName = line.slice(6).trim();
+                    if (line.startsWith('data:'))  dataLine  = line.slice(5).trim();
+                }
+
+                if (!dataLine) continue;
+
+                try {
+                    const payload = JSON.parse(dataLine);
+
+                    if (eventName === 'activity') {
+                        activityFeed.logStream(
+                            payload.message,
+                            payload.type,
+                            payload.category
+                        );
+                    } else if (eventName === 'done') {
+                        // Mark completed
+                        activityFeed.logStream(
+                            `🏁 Stream closed — workflow <strong>${payload.workflow_id}</strong> handed off`,
+                            'success',
+                            'status'
+                        );
+                        // Update stat counter
+                        const statEl = document.getElementById('stat-workflows');
+                        if (statEl && statEl.textContent !== '--') {
+                            statEl.textContent = parseInt(statEl.textContent || '0') + 1;
+                        }
+                    }
+                } catch (parseErr) {
+                    console.warn('[NL stream] JSON parse error:', parseErr, dataLine);
+                }
+            }
+        }
+
+    } catch (err) {
+        if (err.name !== 'AbortError') {
+            activityFeed.logStream(
+                `❌ Orchestration error: ${err.message}`,
+                'error', 'status'
+            );
+        }
+    } finally {
+        // Restore UI
+        submitBtn.classList.remove('loading');
+        submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> <span>Run</span>';
+        iconPulse.classList.remove('running');
+        textarea.disabled = false;
+        textarea.value    = '';
+        textarea.focus();
+        _nlActiveStream = null;
+    }
+}
+
+function setNLGoal(text) {
+    const ta = document.getElementById('nl-goal-input');
+    if (ta) {
+        ta.value = text;
+        ta.focus();
+        // Auto-resize
+        ta.style.height = 'auto';
+        ta.style.height = Math.min(ta.scrollHeight, 120) + 'px';
+    }
+}
+
+function nlOrchestratorKeydown(e) {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        submitNLGoal();
+    }
+    // Auto-resize textarea
+    const ta = e.target;
+    setTimeout(() => {
+        ta.style.height = 'auto';
+        ta.style.height = Math.min(ta.scrollHeight, 120) + 'px';
+    }, 0);
+}

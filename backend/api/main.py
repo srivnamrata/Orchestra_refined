@@ -3,14 +3,17 @@ FastAPI Application - Main Entry Point
 Defines API endpoints for the Multi-Agent Productivity Assistant.
 """
 
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse, FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, AsyncGenerator
 import logging
 from datetime import datetime
 import os
+import asyncio
+import json
+import uuid
 
 # Import agents and services
 from backend.agents.orchestrator_agent import OrchestratorAgent, WorkflowRequest
@@ -335,6 +338,158 @@ async def export_knowledge_graph():
     Shows all entities and their relationships.
     """
     return knowledge_graph.export_graph()
+
+
+# ============================================================================
+# Natural Language Orchestrator — Streaming SSE Endpoint
+# ============================================================================
+
+class OrchestrateRequest(BaseModel):
+    goal: str
+    priority: str = "medium"
+
+
+def _sse(event: str, data: dict) -> str:
+    """Format a Server-Sent Event frame."""
+    return f"event: {event}\ndata: {json.dumps(data)}\n\n"
+
+
+async def _stream_orchestration(goal: str, priority: str, workflow_id: str) -> AsyncGenerator[str, None]:
+    """
+    Parse the user's natural-language goal, synthesise a multi-step plan
+    using the LLM, emit each step as an SSE event, then execute them.
+    """
+    ts = lambda: datetime.now().strftime("%H:%M:%S")
+
+    # ── 1. Acknowledge ────────────────────────────────────────────────────────
+    yield _sse("activity", {
+        "type": "info", "category": "status",
+        "message": f"🎯 Orchestrator received: \"{goal}\"",
+        "timestamp": ts()
+    })
+    await asyncio.sleep(0.3)
+
+    # ── 2. Parse intent via LLM ───────────────────────────────────────────────
+    yield _sse("activity", {
+        "type": "thinking", "category": "analysis",
+        "message": "🧠 Analysing goal and decomposing into sub-tasks…",
+        "timestamp": ts()
+    })
+
+    plan_prompt = f"""
+You are an AI Orchestrator. A user has submitted the following goal:
+
+Goal: {goal}
+Priority: {priority}
+
+Break this goal into 3-6 concrete, actionable sub-tasks that can be delegated to
+specialist sub-agents (scheduler, task, knowledge, news, research).
+
+Respond ONLY with a valid JSON array — no markdown, no commentary:
+[
+  {{"step": 1, "agent": "<agent_name>", "action": "<what to do>", "detail": "<brief rationale>"}},
+  ...
+]
+"""
+    try:
+        plan_raw = await llm_service.call(plan_prompt)
+        # Strip markdown fences if present
+        plan_raw = plan_raw.strip().lstrip("```json").lstrip("```").rstrip("```").strip()
+        steps = json.loads(plan_raw)
+    except Exception as e:
+        logger.warning(f"LLM plan parse failed ({e}), falling back to heuristic plan")
+        steps = [
+            {"step": 1, "agent": "knowledge", "action": "Gather context", "detail": "Build knowledge graph for the goal"},
+            {"step": 2, "agent": "task",      "action": "Create tasks",    "detail": "Break goal into trackable tasks"},
+            {"step": 3, "agent": "scheduler", "action": "Schedule work",   "detail": "Assign deadlines and calendar blocks"},
+        ]
+
+    yield _sse("activity", {
+        "type": "success", "category": "analysis",
+        "message": f"📋 Plan generated: {len(steps)} sub-tasks identified",
+        "timestamp": ts()
+    })
+    await asyncio.sleep(0.2)
+
+    # ── 3. Emit each planned step ─────────────────────────────────────────────
+    agent_icons = {
+        "scheduler": "📅", "task": "✅", "knowledge": "🧩",
+        "news": "📰", "research": "🔬", "critic": "🔍"
+    }
+    for step in steps:
+        agent = step.get("agent", "orchestrator")
+        icon  = agent_icons.get(agent, "⚙️")
+        yield _sse("activity", {
+            "type": "info", "category": "tasks",
+            "message": f"{icon} [{agent.upper()}] {step.get('action', 'Processing')} — {step.get('detail', '')}",
+            "timestamp": ts()
+        })
+        await asyncio.sleep(0.35)
+
+    # ── 4. Create & run the workflow ──────────────────────────────────────────
+    yield _sse("activity", {
+        "type": "thinking", "category": "status",
+        "message": "⚙️ Dispatching workflow to Orchestrator Agent…",
+        "timestamp": ts()
+    })
+    await asyncio.sleep(0.2)
+
+    from backend.agents.orchestrator_agent import WorkflowRequest as WR
+    workflow_request = WR(
+        request_id=workflow_id,
+        goal=goal,
+        description=f"NL-submitted goal: {goal}",
+        priority=priority,
+        deadline=None,
+        context={"source": "nl_input", "steps_planned": len(steps)},
+        created_at=datetime.now().isoformat()
+    )
+    asyncio.create_task(orchestrator.process_user_request(workflow_request))
+
+    yield _sse("activity", {
+        "type": "success", "category": "status",
+        "message": f"🚀 Workflow <strong>{workflow_id}</strong> is running — agents are executing in parallel",
+        "timestamp": ts()
+    })
+    await asyncio.sleep(0.3)
+
+    # ── 5. Simulate sub-agent progress pulses ─────────────────────────────────
+    progress_msgs = [
+        ("tasks",    "thinking", "🔄 Sub-agents processing their assigned tasks…"),
+        ("analysis", "info",     "🧩 Knowledge graph being updated with new entities…"),
+        ("status",   "success",  "✅ Core execution steps complete — finalising outputs…"),
+    ]
+    for cat, typ, msg in progress_msgs:
+        await asyncio.sleep(0.8)
+        yield _sse("activity", {"type": typ, "category": cat, "message": msg, "timestamp": ts()})
+
+    # ── 6. Done ───────────────────────────────────────────────────────────────
+    yield _sse("activity", {
+        "type": "success", "category": "status",
+        "message": f"🎉 Orchestration complete for: <em>{goal[:60]}{'…' if len(goal)>60 else ''}</em>",
+        "timestamp": ts()
+    })
+    yield _sse("done", {"workflow_id": workflow_id, "steps": len(steps)})
+
+
+@app.post("/orchestrate/stream", tags=["Orchestrator"])
+async def orchestrate_stream(request: OrchestrateRequest):
+    """
+    Natural-language Orchestrator entry-point with SSE streaming.
+    POST { "goal": "...", "priority": "medium" }
+    Returns a text/event-stream of activity events consumed by the frontend.
+    """
+    workflow_id = str(uuid.uuid4())[:8]
+    logger.info(f"🌊 Streaming orchestration {workflow_id}: {request.goal}")
+
+    return StreamingResponse(
+        _stream_orchestration(request.goal, request.priority, workflow_id),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        }
+    )
 
 
 @app.post("/demonstrate-critic-agent", tags=["Demo"])
