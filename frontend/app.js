@@ -262,43 +262,49 @@ const commandPalette = {
 // ============================================================================
 
 function switchView(viewId) {
-    // Update nav tabs
-    document.querySelectorAll('.nav-tab').forEach(tab => {
+    // Auto-load notifications when reasoning tab opens
+    if (viewId === 'reasoning') {
+        setTimeout(loadNotifications, 200);
+    }
+
+    // Update nav tabs — only match tabs in the actual nav bar (not breadcrumb)
+    document.querySelectorAll('.quick-nav-bar .nav-tab').forEach(tab => {
         tab.classList.remove('active');
     });
-    document.querySelector(`[data-target="${viewId}"]`).classList.add('active');
-    
-    // Show view
+    const activeTab = document.querySelector(`.quick-nav-bar [data-target="${viewId}"]`);
+    if (activeTab) activeTab.classList.add('active');
+
+    // Show the matching view, hide all others
     document.querySelectorAll('.view').forEach(view => {
         view.classList.remove('active');
     });
-    document.getElementById(viewId).classList.add('active');
-    
+    const viewEl = document.getElementById(viewId);
+    if (viewEl) viewEl.classList.add('active');
+
     // Update breadcrumb
     updateBreadcrumb(viewId);
 }
 
 function updateBreadcrumb(viewId) {
     const breadcrumbs = document.getElementById('breadcrumbs');
+    if (!breadcrumbs) return;
     const labels = {
-        'dashboard': 'Dashboard',
-        'workflows': 'Workflows',
-        'vibe-checks': 'Vibe Checks',
-        'debates': 'Debates'
+        'dashboard':  'Dashboard',
+        'workflows':  'Workflows',
+        'vibe-checks':'Vibe Checks',
+        'debates':    'Debates',
+        'reasoning':  'Agent Reasoning',
     };
-    
-    const label = labels[viewId] || 'Dashboard';
-    
+    const label = labels[viewId] || viewId;
     if (viewId === 'dashboard') {
         breadcrumbs.innerHTML = `<span class="breadcrumb-home"><i class="fa-solid fa-house"></i> Dashboard</span>`;
     } else {
         breadcrumbs.innerHTML = `
-            <span class="breadcrumb-home"><i class="fa-solid fa-house"></i> Dashboard</span>
+            <span class="breadcrumb-home" onclick="switchView('dashboard')" style="cursor:pointer;">
+                <i class="fa-solid fa-house"></i> Dashboard
+            </span>
             <span class="breadcrumb-separator">/</span>
             <span class="breadcrumb-text">${label}</span>
-            <button class="nav-tab" style="position: absolute; left: 50%; color: var(--text-muted); font-size: 0.85rem;" onclick="switchView('dashboard')">
-                ← Back to Dashboard
-            </button>
         `;
     }
 }
@@ -3360,16 +3366,13 @@ async function dismissNotification(notifId) {
 
 // Load notifications when switching to reasoning tab
 const _origSwitchView = typeof switchView === 'function' ? switchView : null;
-// Hook into tab switching to auto-load notifications
+// Poll notifications every 5 min when reasoning tab is active
 document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
-        // Poll for new notifications every 5 min when the tab is active
         loadNotifications();
         setInterval(() => {
             const tab = document.getElementById('reasoning');
-            if (tab && tab.classList.contains('active')) {
-                loadNotifications();
-            }
+            if (tab && tab.classList.contains('active')) loadNotifications();
         }, 300000);
     }, 2000);
 });
