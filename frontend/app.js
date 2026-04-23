@@ -2910,3 +2910,168 @@ function nlOrchestratorKeydown(e) {
         ta.style.height = Math.min(ta.scrollHeight, 120) + 'px';
     }, 0);
 }
+
+// ============================================================================
+// Voice Input — Web Speech API
+// ============================================================================
+
+const voiceInput = {
+    recognition: null,
+    isListening: false,
+    isSupported: false,
+    interimTranscript: '',
+    finalTranscript: '',
+
+    init() {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+            // Hide mic button if not supported
+            const micBtn = document.getElementById('nl-mic-btn');
+            if (micBtn) micBtn.style.display = 'none';
+            console.warn('[Voice] Web Speech API not supported in this browser');
+            return;
+        }
+
+        this.isSupported = true;
+        this.recognition = new SpeechRecognition();
+        this.recognition.continuous = true;       // keep listening until stopped
+        this.recognition.interimResults = true;   // show live partial results
+        this.recognition.lang = 'en-US';
+        this.recognition.maxAlternatives = 1;
+
+        this.recognition.onstart = () => {
+            this.isListening = true;
+            this._setListeningUI(true);
+        };
+
+        this.recognition.onresult = (event) => {
+            this.interimTranscript = '';
+            this.finalTranscript = '';
+
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                const t = event.results[i][0].transcript;
+                if (event.results[i].isFinal) {
+                    this.finalTranscript += t;
+                } else {
+                    this.interimTranscript += t;
+                }
+            }
+
+            // Show live interim text in the textarea
+            const ta = document.getElementById('nl-goal-input');
+            if (ta) {
+                const existing = ta.dataset.voiceBase || '';
+                ta.value = existing + this.finalTranscript + this.interimTranscript;
+                ta.style.height = 'auto';
+                ta.style.height = Math.min(ta.scrollHeight, 120) + 'px';
+            }
+
+            // When we have a final result, save it as the confirmed base
+            if (this.finalTranscript) {
+                const ta = document.getElementById('nl-goal-input');
+                if (ta) ta.dataset.voiceBase = (ta.dataset.voiceBase || '') + this.finalTranscript;
+            }
+        };
+
+        this.recognition.onerror = (event) => {
+            console.error('[Voice] Error:', event.error);
+            const hints = {
+                'not-allowed':   '🎤 Microphone access denied — please allow microphone in your browser settings',
+                'no-speech':     '🎤 No speech detected — try again',
+                'network':       '🎤 Network error — check connection',
+                'audio-capture': '🎤 No microphone found',
+            };
+            const msg = hints[event.error] || `🎤 Voice error: ${event.error}`;
+            document.getElementById('nl-hint-text').innerHTML =
+                `<span style="color:#ef4444;">${msg}</span>`;
+            this.stop();
+        };
+
+        this.recognition.onend = () => {
+            if (this.isListening) {
+                // Auto-restart if we didn't manually stop (handles browser auto-stop after silence)
+                try { this.recognition.start(); } catch (_) { this._setListeningUI(false); }
+            } else {
+                this._setListeningUI(false);
+            }
+        };
+    },
+
+    start() {
+        if (!this.isSupported) return;
+        const ta = document.getElementById('nl-goal-input');
+        if (ta) {
+            // Save current text as base so voice appends to it
+            ta.dataset.voiceBase = ta.value ? ta.value.trimEnd() + ' ' : '';
+        }
+        try {
+            this.recognition.start();
+        } catch (e) {
+            console.warn('[Voice] Start error:', e);
+        }
+    },
+
+    stop() {
+        this.isListening = false;
+        try { this.recognition.stop(); } catch (_) {}
+        this._setListeningUI(false);
+
+        // Clean up the voice base tag
+        const ta = document.getElementById('nl-goal-input');
+        if (ta) {
+            delete ta.dataset.voiceBase;
+            // Trim trailing whitespace/partial
+            ta.value = ta.value.trim();
+        }
+    },
+
+    _setListeningUI(listening) {
+        const micBtn   = document.getElementById('nl-mic-btn');
+        const micIcon  = document.getElementById('nl-mic-icon');
+        const wave     = document.getElementById('nl-voice-wave');
+        const hintText = document.getElementById('nl-hint-text');
+
+        if (!micBtn) return;
+
+        if (listening) {
+            micBtn.classList.add('listening');
+            micBtn.classList.remove('processing');
+            micBtn.title = 'Click to stop listening';
+            if (micIcon) {
+                micIcon.className = 'fa-solid fa-microphone-slash';
+            }
+            if (wave) wave.classList.add('active');
+            if (hintText) hintText.innerHTML =
+                '<span style="color:#ef4444;"><i class="fa-solid fa-circle" style="font-size:0.6rem;animation:micPulse 1s infinite;"></i> Listening… speak your goal, click mic to stop</span>';
+        } else {
+            micBtn.classList.remove('listening', 'processing');
+            micBtn.title = 'Click to speak';
+            if (micIcon) micIcon.className = 'fa-solid fa-microphone';
+            if (wave) wave.classList.remove('active');
+            if (hintText) hintText.innerHTML =
+                '<i class="fa-solid fa-keyboard"></i> Ctrl+Enter to submit &nbsp;·&nbsp; <i class="fa-solid fa-microphone"></i> Click mic to speak';
+        }
+    }
+};
+
+function toggleVoiceInput() {
+    if (!voiceInput.isSupported) {
+        alert('Voice input is not supported in this browser. Please use Chrome or Edge.');
+        return;
+    }
+    if (voiceInput.isListening) {
+        voiceInput.stop();
+    } else {
+        voiceInput.start();
+    }
+}
+
+// Initialise on DOM ready
+document.addEventListener('DOMContentLoaded', () => {
+    voiceInput.init();
+});
+
+// Also init now in case DOMContentLoaded already fired
+if (document.readyState !== 'loading') {
+    voiceInput.init();
+}

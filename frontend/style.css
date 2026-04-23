@@ -2004,3 +2004,101 @@ body {
     from { opacity: 0; transform: translateY(-10px); }
     to   { opacity: 1; transform: translateY(0); }
 }
+
+/* ── Voice Input ─────────────────────────────────────────────────────────── */
+
+.nl-btn-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.nl-mic-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(79, 172, 254, 0.35);
+    background: rgba(79, 172, 254, 0.1);
+    color: rgba(79, 172, 254, 0.8);
+    font-size: 0.9rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.nl-mic-btn:hover {
+    background: rgba(79, 172, 254, 0.2);
+    border-color: rgba(79, 172, 254, 0.6);
+    color: var(--primary);
+    transform: scale(1.05);
+}
+
+.nl-mic-btn.listening {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.7);
+    color: #ef4444;
+    animation: micPulse 1s ease-in-out infinite;
+}
+
+.nl-mic-btn.listening:hover {
+    background: rgba(239, 68, 68, 0.3);
+}
+
+.nl-mic-btn.processing {
+    background: rgba(245, 158, 11, 0.15);
+    border-color: rgba(245, 158, 11, 0.5);
+    color: #f59e0b;
+    pointer-events: none;
+}
+
+.nl-mic-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+@keyframes micPulse {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5);
+        transform: scale(1);
+    }
+    50% {
+        box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
+        transform: scale(1.08);
+    }
+}
+
+/* Waveform bars shown while listening */
+.nl-voice-wave {
+    display: none;
+    align-items: center;
+    gap: 3px;
+    height: 18px;
+    margin-left: 4px;
+}
+
+.nl-voice-wave.active {
+    display: flex;
+}
+
+.nl-voice-wave span {
+    display: inline-block;
+    width: 3px;
+    border-radius: 2px;
+    background: #ef4444;
+    animation: waveBar 0.8s ease-in-out infinite;
+}
+
+.nl-voice-wave span:nth-child(1) { height: 6px;  animation-delay: 0s; }
+.nl-voice-wave span:nth-child(2) { height: 12px; animation-delay: 0.1s; }
+.nl-voice-wave span:nth-child(3) { height: 18px; animation-delay: 0.2s; }
+.nl-voice-wave span:nth-child(4) { height: 12px; animation-delay: 0.3s; }
+.nl-voice-wave span:nth-child(5) { height: 6px;  animation-delay: 0.4s; }
+
+@keyframes waveBar {
+    0%, 100% { transform: scaleY(0.4); opacity: 0.6; }
+    50%       { transform: scaleY(1);   opacity: 1; }
+}

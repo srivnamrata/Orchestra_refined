@@ -168,13 +168,21 @@
                                                 <option value="high">High</option>
                                                 <option value="critical">Critical</option>
                                             </select>
-                                            <button class="btn btn-primary nl-submit-btn" id="nl-submit-btn" onclick="submitNLGoal()">
-                                                <i class="fa-solid fa-paper-plane"></i> <span>Run</span>
-                                            </button>
+                                            <div class="nl-btn-row">
+                                                <button class="nl-mic-btn" id="nl-mic-btn" onclick="toggleVoiceInput()" title="Click to speak">
+                                                    <i class="fa-solid fa-microphone" id="nl-mic-icon"></i>
+                                                </button>
+                                                <button class="btn btn-primary nl-submit-btn" id="nl-submit-btn" onclick="submitNLGoal()">
+                                                    <i class="fa-solid fa-paper-plane"></i> <span>Run</span>
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                     <div class="nl-hint-row">
-                                        <span class="nl-hint"><i class="fa-solid fa-keyboard"></i> Ctrl+Enter to submit</span>
+                                        <span class="nl-hint" id="nl-hint-text"><i class="fa-solid fa-keyboard"></i> Ctrl+Enter to submit &nbsp;·&nbsp; <i class="fa-solid fa-microphone"></i> Click mic to speak</span>
+                                        <div class="nl-voice-wave" id="nl-voice-wave">
+                                            <span></span><span></span><span></span><span></span><span></span>
+                                        </div>
                                         <div class="nl-quick-prompts">
                                             <button class="nl-quick" onclick="setNLGoal('Research latest AI trends and summarise findings')">AI Research</button>
                                             <button class="nl-quick" onclick="setNLGoal('Plan my week: review tasks, schedule focus blocks, flag overdue items')">Week Planning</button>
