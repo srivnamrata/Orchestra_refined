@@ -1916,34 +1916,75 @@ async function submitNewNote() {
     }
 }
 
-async function fetchHealthStatus() {
+async function fetchHealthStatus(attempt = 1) {
+    const MAX_ATTEMPTS = 4;
+    const TIMEOUT_MS = 10000;
+    const agentList = document.getElementById('agent-status-list');
+
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3000);
-    
+    const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
     try {
-        const res = await fetch('/health', { signal: controller.signal });
-        clearTimeout(timeoutId);
-        
-        if (!res.ok) throw new Error(`Status ${res.status}`);
-        
-        const data = await res.json();
-        const agentList = document.getElementById('agent-status-list');
-        
-        if (agentList && data.services) {
-            agentList.innerHTML = '';
-            Object.entries(data.services).forEach(([service, state]) => {
-                const color = (state==='ready' || state==='running') ? '#10b981' : '#f59e0b';
-                agentList.innerHTML += `<li style="margin: 8px 0; padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                    <strong>${service.replace('_', ' ').toUpperCase()}</strong>
-                    <span style="float: right; color: ${color};">${state}</span>
-                </li>`;
-            });
+        let data = null;
+        let useAgentEndpoint = false;
+
+        try {
+            const res = await fetch('/api/agents/status', { signal: controller.signal });
+            if (res.ok) { data = await res.json(); useAgentEndpoint = true; }
+        } catch (_) {}
+
+        if (!data) {
+            const res = await fetch('/health', { signal: controller.signal });
+            if (!res.ok) throw new Error(`Status ${res.status}`);
+            data = await res.json();
         }
+
+        clearTimeout(timeoutId);
+        if (!agentList) return;
+        agentList.innerHTML = '';
+
+        const agentIcons = {
+            orchestrator: '🎯', critic_agent: '🔍', auditor_agent: '🛡️',
+            research_agent: '🔬', news_agent: '📰', task_agent: '✅',
+            scheduler_agent: '📅', knowledge_agent: '🧩', knowledge_graph: '🧩',
+            pubsub: '📡', database: '🗄️'
+        };
+
+        const entries = useAgentEndpoint
+            ? Object.entries(data.agents || {})
+            : Object.entries(data.services || {});
+
+        entries.forEach(([key, val]) => {
+            const state = typeof val === 'object' ? val.status : val;
+            const role  = typeof val === 'object' ? val.role   : key.replace(/_/g, ' ');
+            const icon  = agentIcons[key] || '⚙️';
+            const isOk  = ['ready', 'running', 'connected'].includes(state);
+            const color = isOk ? '#10b981' : '#f59e0b';
+            const dot   = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${color};margin-right:6px;box-shadow:0 0 6px ${color};"></span>`;
+            agentList.innerHTML += `
+                <li style="margin:6px 0;padding:8px 10px;border-radius:8px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);">
+                    <span style="font-size:1rem;margin-right:6px;">${icon}</span>
+                    <strong style="font-size:0.85rem;">${role}</strong>
+                    <span style="float:right;font-size:0.78rem;color:${color};">${dot}${state}</span>
+                </li>`;
+        });
+
+        if (useAgentEndpoint && data.system) {
+            agentList.innerHTML += `<li style="margin-top:10px;padding:8px 10px;border-radius:8px;background:rgba(79,172,254,0.06);border:1px solid rgba(79,172,254,0.15);font-size:0.78rem;color:#aaa;">
+                🤖 LLM: <strong>${data.system.llm}</strong> &nbsp;|&nbsp; 📦 Env: <strong>${data.system.environment}</strong>
+            </li>`;
+        }
+
     } catch (err) {
         clearTimeout(timeoutId);
-        const agentList = document.getElementById('agent-status-list');
         if (agentList) {
-            agentList.innerHTML = '<li style="color: #f59e0b; padding: 10px 0;">⚠️ Service unavailable</li>';
+            if (attempt < MAX_ATTEMPTS) {
+                const delay = attempt * 2000;
+                agentList.innerHTML = `<li style="color:#f59e0b;padding:10px 0;">🔄 Connecting… (attempt ${attempt}/${MAX_ATTEMPTS})</li>`;
+                setTimeout(() => fetchHealthStatus(attempt + 1), delay);
+            } else {
+                agentList.innerHTML = `<li style="color:#f59e0b;padding:10px 0;">⚠️ Could not reach backend — <a href="#" onclick="fetchHealthStatus(1);return false;" style="color:#4facfe;">retry</a></li>`;
+            }
         }
     }
 }
