@@ -2876,7 +2876,7 @@ async function submitNLGoal() {
                             statEl.textContent = parseInt(statEl.textContent || '0') + 1;
                         }
                         // Refresh task/event panels
-                        setTimeout(() => { triggerTaskDemo(); }, 800);
+                        setTimeout(() => { triggerTaskDemo(); switchAgentTab('task-tab'); }, 2000);
                     }
                 } catch (parseErr) {
                     console.warn('[NL stream] JSON parse error:', parseErr, dataLine);
