@@ -1450,8 +1450,26 @@ async function editTask(taskId, taskTitle) {
         appendLog(`❌ Cannot edit task: missing task ID`, 'error');
         return;
     }
-    appendLog(`✏️ Editing task: "${taskTitle}"`, 'info');
-    openTaskModal('edit', { id: taskId, title: taskTitle });
+    appendLog(`✏️ Loading task: "${taskTitle}"`, 'info');
+    // Fetch full task data so we can pre-fill all fields
+    try {
+        const res = await fetch(`/api/tasks/${taskId}`);
+        if (res.ok) {
+            const data = await res.json();
+            const t = data.task || {};
+            openTaskModal('edit', {
+                id: taskId,
+                title: t.title || taskTitle,
+                description: t.description || '',
+                priority: t.priority || 'medium',
+                due_date: t.due_date ? t.due_date.split('T')[0] : ''
+            });
+        } else {
+            openTaskModal('edit', { id: taskId, title: taskTitle });
+        }
+    } catch (e) {
+        openTaskModal('edit', { id: taskId, title: taskTitle });
+    }
 }
 
 async function completeTask(taskId) {
@@ -1711,10 +1729,11 @@ async function submitTaskForm() {
             if (response.ok) {
                 appendLog(`✏️ Task updated: "${title}"`, 'success');
                 closeTaskModal();
-                // Refresh task list
                 triggerTaskDemo();
             } else {
-                appendLog('Failed to update task', 'error');
+                const errData = await response.json().catch(() => ({}));
+                const errMsg = errData.detail || errData.error || `HTTP ${response.status}`;
+                appendLog(`❌ Failed to update task: ${errMsg}`, 'error');
             }
         } else {
             // Create new task
@@ -2397,10 +2416,14 @@ async function triggerTaskDemo() {
             appendLog(`✅ Found ${tasksData.count} task(s) in your list`, 'success');
             
             const taskList = tasksData.tasks.map((task, index) => ({
-                id: `task-${index}`,
+                id: task.task_id,           // real DB id for edit/delete/complete
+                task_id: task.task_id,
                 title: task.title,
                 content: `Priority: ${task.priority} | Status: ${task.status}${task.due_date ? ' | Due: ' + new Date(task.due_date).toLocaleDateString() : ''}`,
-                details: task.description || 'No description provided'
+                details: task.description || 'No description provided',
+                due_date: task.due_date,
+                priority: task.priority,
+                status: task.status
             }));
             
             displayAgentContent('task', `📋 Your Task List (${tasksData.count} total)`, 'fa-list', {

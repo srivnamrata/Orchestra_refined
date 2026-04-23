@@ -515,12 +515,21 @@ Respond ONLY with a valid JSON array, no markdown fences:
         # Execute real action
         try:
             if agent == "task":
+                # Parse due_date from LLM params
+                task_due = None
+                raw_due = params.get("due_date")
+                if raw_due:
+                    try:
+                        task_due = datetime.strptime(str(raw_due)[:10], "%Y-%m-%d")
+                    except Exception:
+                        pass
                 result = create_task_in_db(
                     task_id=str(uuid.uuid4())[:8],
                     title=params.get("title", action),
                     description=params.get("description", detail),
                     priority=params.get("priority", priority),
-                    due_date=None,
+                    due_date=task_due,
+                    source="orchestrator",
                 )
                 results.append({"type": "task", "id": result.task_id, "title": result.title})
                 yield _sse("activity", {
@@ -535,12 +544,15 @@ Respond ONLY with a valid JSON array, no markdown fences:
                 event_title = params.get("title", action)
                 duration = params.get("duration_minutes", 60)
                 try:
+                    # Default to 9am so the date displays correctly in all timezones
+                    event_start = datetime.strptime(event_date, "%Y-%m-%d").replace(hour=9, minute=0)
                     result = create_event_in_db(
                         event_id=str(uuid.uuid4())[:8],
                         title=event_title,
-                        start_time=datetime.strptime(event_date, "%Y-%m-%d"),
-                        end_time=datetime.strptime(event_date, "%Y-%m-%d") + timedelta(minutes=duration),
+                        start_time=event_start,
+                        end_time=event_start + timedelta(minutes=duration),
                         description=detail,
+                        source="orchestrator",
                     )
                     results.append({"type": "event", "id": result.event_id, "title": result.title})
                     yield _sse("activity", {
