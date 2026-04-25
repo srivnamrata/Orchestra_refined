@@ -1,1 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
 
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Agent Productivity Assistant</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+    <div class="background-blobs">
+        <div class="blob primary"></div>
+        <div class="blob secondary"></div>
+        <div class="blob accent"></div>
+    </div>
+
+    <div class="app-container">
+        <!-- Main Content -->
+        <main class="content-area">
+            <header class="topbar">
+                <div>
+                    <h1>ORCHESTRA</h1>
+                    <p style="margin: 0; font-size: 0.9rem; color: #888; margin-top: 4px;"><em><strong>Living the best version of Yourself</strong></em></p>
+                </div>
+                <div class="topbar-actions">
+                    <button class="command-hint" onclick="commandPalette.open()" title="Open Command Palette (Ctrl+K)">
+                        <i class="fa-solid fa-search"></i>
+                        <span class="command-hint-shortcut">⌘K</span>
+                    </button>
+                    <button class="thought-trace-toggle" id="thought-trace-toggle" onclick="toggleThoughtTrace()" title="Toggle Agent Reasoning Sidebar">
+                        <i class="fa-solid fa-brain"></i>
+                        <span class="trace-badge" id="trace-badge" style="display:none">0</span>
+                    </button>
+                    <div class="user-profile">
+                        <div class="avatar">U</div>
+                        <span>Administrator</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Command Palette Modal -->
+            <div id="command-palette-overlay" class="command-palette-overlay" style="display: none;">
+                <div class="command-palette glass-panel">
+                    <div class="command-search-container">
+                        <i class="fa-solid fa-search"></i>
+                        <input 
+                            type="text" 
+                            id="command-search" 
+                            class="command-search" 
+                            placeholder="⌘K Search commands..."
+                            autocomplete="off"
+                        >
+                        <div class="command-search-hint">
+                            <span class="hint-text">ESC to close</span>
+                        </div>
+                    </div>
+                    
+                    <div class="command-list" id="command-list">
+                        <div class="command-category">
+                            <div class="category-label">Recent</div>
+                            <div id="recent-commands" class="category-items"></div>
+                        </div>
+                        <div class="command-category">
+                            <div class="category-label">Agents</div>
+                            <div id="agents-commands" class="category-items"></div>
+                        </div>
+                        <div class="command-category">
+                            <div class="category-label">Data & Content</div>
+                            <div id="data-commands" class="category-items"></div>
+                        </div>
+                        <div class="command-category">
+                            <div class="category-label">Create & Manage</div>
+                            <div id="create-commands" class="category-items"></div>
+                        </div>
+                        <div class="command-category">
+                            <div class="category-label">Navigation</div>
+                            <div id="nav-commands" class="category-items"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Floating Hint Badge for Command Palette -->
+            <div id="floating-hint-badge" class="floating-hint-badge" style="display: none;" onclick="commandPalette.open(); this.style.display='none';">
+                <span class="hint-icon"><i class="fa-solid fa-keyboard"></i></span>
+                <span>Press <strong>Ctrl+K</strong> for commands</span>
+            </div>
+
+            <!-- Quick-Access Navigation Bar -->
+            <nav class="quick-nav-bar">
+                <div class="breadcrumbs" id="breadcrumbs">
+                    <span class="breadcrumb-home"><i class="fa-solid fa-house"></i> Dashboard</span>
+                </div>
+                <div class="nav-tabs">
+                    <button class="nav-tab active" data-target="dashboard" onclick="switchView('dashboard')">
+                        <i class="fa-solid fa-chart-pie"></i> Dashboard
+                    </button>
+                    <button class="nav-tab" data-target="workflows" onclick="switchView('workflows')">
+                        <i class="fa-solid fa-diagram-project"></i> Workflows
+                    </button>
+                    <button class="nav-tab" data-target="vibe-checks" onclick="switchView('vibe-checks')">
+                        <i class="fa-solid fa-shield-halved"></i> Vibe Checks
+                    </button>
+                    <button class="nav-tab" data-target="debates" onclick="switchView('debates')">
+                        <i class="fa-solid fa-people-arrows"></i> Debates
+                    </button>
+                    <button class="nav-tab" data-target="reasoning" onclick="switchView('reasoning')">
+                        <i class="fa-solid fa-brain"></i> Agent Reasoning
+                        <span class="notif-badge" id="notif-badge" style="display:none;">0</span>
+                    </button>
+                </div>
+            </nav>
+
+            <div class="view-container">
+                <!-- Dashboard View -->
+                <div id="dashboard" class="view active">
+                    <div class="stats-grid">
+                        <div class="stat-card glass-panel interactive" onclick="expandStatCard('workflows')" title="Click to see details">
+                            <div class="stat-content">
+                                <h3>Active Workflows</h3>
+                                <div class="value" id="stat-workflows">--</div>
+                                <div class="stat-trend" id="trend-workflows">
+                                    <i class="fa-solid fa-arrow-trend-up"></i> <span id="trend-text-workflows">+2 this week</span>
+                                </div>
+                            </div>
+                            <canvas id="sparkline-workflows" class="stat-sparkline" width="200" height="40" style="width: 100%; height: 40px; opacity: 0.3;"></canvas>
+                        </div>
+                        <div class="stat-card glass-panel interactive" onclick="expandStatCard('safety')" title="Click to see breakdown">
+                            <div class="stat-content">
+                                <h3>Safety Score</h3>
+                                <div class="value text-gradient" id="stat-safety">98%</div>
+                                <div class="stat-trend" id="trend-safety">
+                                    <i class="fa-solid fa-arrow-trend-up"></i> <span id="trend-text-safety">+2% this month</span>
+                                </div>
+                            </div>
+                            <canvas id="sparkline-safety" class="stat-sparkline" width="200" height="40" style="width: 100%; height: 40px; opacity: 0.3;"></canvas>
+                        </div>
+                        <div class="stat-card glass-panel interactive" onclick="expandStatCard('completed')" title="Click to see results">
+                            <div class="stat-content">
+                                <h3>Completed Tasks</h3>
+                                <div class="value" id="stat-completed">--</div>
+                                <div class="stat-trend" id="trend-completed">
+                                    <i class="fa-solid fa-arrow-trend-up"></i> <span id="trend-text-completed">+1 this week</span>
+                                </div>
+                            </div>
+                            <canvas id="sparkline-completed" class="stat-sparkline" width="200" height="40" style="width: 100%; height: 40px; opacity: 0.3;"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-grid">
+                        <div class="left-column">
+                            <div class="glass-panel main-panel">
+                                <h2><i class="fa-solid fa-wand-magic-sparkles"></i> New Action Request</h2>
+                                <p>Submit a goal to the Orchestrator, or trigger a demo scenario.</p>
+
+                                <!-- ── Natural Language Orchestrator Input ── -->
+                                <div class="nl-orchestrator-wrap">
+                                    <div class="nl-input-row">
+                                        <div class="nl-icon-pulse" id="nl-icon-pulse">
+                                            <i class="fa-solid fa-microchip-ai"></i>
+                                        </div>
+                                        <!-- Textarea wrapper so mic can float inside it -->
+                                        <div class="nl-textarea-wrap">
+                                            <textarea
+                                                id="nl-goal-input"
+                                                class="nl-goal-textarea"
+                                                placeholder="Tell the Orchestrator what you want to achieve… e.g. 'Plan a product launch for next month' or 'Research recent AI breakthroughs and create a summary task'"
+                                                rows="2"
+                                                onkeydown="nlOrchestratorKeydown(event)"
+                                            ></textarea>
+                                            <!-- Mic floats inside bottom-right of textarea -->
+                                            <button class="nl-mic-btn" id="nl-mic-btn" onclick="toggleVoiceInput()" title="Click to speak">
+                                                <i class="fa-solid fa-microphone" id="nl-mic-icon"></i>
+                                            </button>
+                                        </div>
+                                        <div class="nl-input-controls">
+                                            <select id="nl-priority" class="nl-priority-select">
+                                                <option value="low">Low</option>
+                                                <option value="medium" selected>Medium</option>
+                                                <option value="high">High</option>
+                                                <option value="critical">Critical</option>
+                                            </select>
+                                            <button class="btn btn-primary nl-submit-btn" id="nl-submit-btn" onclick="submitNLGoal()">
+                                                <i class="fa-solid fa-paper-plane"></i> <span>Run</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="nl-hint-row">
+                                        <span class="nl-hint" id="nl-hint-text"><i class="fa-solid fa-keyboard"></i> Ctrl+Enter to submit &nbsp;·&nbsp; <i class="fa-solid fa-microphone"></i> Click mic to speak</span>
+                                        <div class="nl-voice-wave" id="nl-voice-wave">
+                                            <span></span><span></span><span></span><span></span><span></span>
+                                        </div>
+                                        <div class="nl-quick-prompts">
+                                            <button class="nl-quick" onclick="setNLGoal('Research latest AI trends and summarise findings')">AI Research</button>
+                                            <button class="nl-quick" onclick="setNLGoal('Plan my week: review tasks, schedule focus blocks, flag overdue items')">Week Planning</button>
+                                            <button class="nl-quick" onclick="setNLGoal('Fetch top news headlines and create a briefing note')">News Briefing</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="action-buttons">
+                                    <button class="btn btn-primary" onclick="triggerCriticDemo()">
+                                        <i class="fa-solid fa-play"></i> Run Critic Replan Demo
+                                    </button>
+                                    <button class="btn btn-secondary" onclick="triggerVibeCheckDemo()">
+                                        <i class="fa-solid fa-shield"></i> Run Vibe-Check Demo
+                                    </button>
+                                    <button class="btn btn-accent" onclick="triggerDebateDemo()">
+                                        <i class="fa-solid fa-comments"></i> Initiate Debate
+                                    </button>
+                                    <button class="btn btn-info" onclick="triggerNewsDemo()" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                                        <i class="fa-solid fa-newspaper"></i> Fetch News Headlines
+                                    </button>
+                                    <button class="btn btn-info" onclick="triggerResearchDemo()" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                                        <i class="fa-solid fa-book"></i> Fetch Research Papers
+                                    </button>
+                                    <button class="btn btn-info" onclick="triggerTaskDemo()" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                                        <i class="fa-solid fa-list"></i> Task List
+                                    </button>
+                                    <button class="btn btn-info" onclick="triggerSchedulerDemo()" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+                                        <i class="fa-solid fa-calendar"></i> Event Schedule
+                                    </button>
+                                    <button class="btn btn-info" onclick="triggerKnowledgeDemo()" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);">
+                                        <i class="fa-solid fa-lightbulb"></i> Gather Context
+                                    </button>
+                                    <button class="btn btn-info" onclick="openTaskModal()" style="background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);">
+                                        <i class="fa-solid fa-plus"></i> Create New Task
+                                    </button>
+                                    <button class="btn btn-info" onclick="openEventModal()" style="background: linear-gradient(135deg, #ec4899 0%, #be185d 100%);">
+                                        <i class="fa-solid fa-plus"></i> Schedule New Event
+                                    </button>
+                                    <button class="btn btn-info" onclick="openNoteModal()" style="background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);">
+                                        <i class="fa-solid fa-note-sticky"></i> Create New Note
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="glass-panel main-panel mt-2">
+                                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
+                                    <h2 style="margin:0;"><i class="fa-solid fa-activity"></i> Smart Activity Feed</h2>
+                                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:5px 12px;background:rgba(79,172,254,0.08);border:1px solid rgba(79,172,254,0.25);border-radius:20px;transition:all 0.2s;" title="Show why each action was recommended" id="explain-reasoning-label">
+                                        <input type="checkbox" id="explain-reasoning-toggle" onchange="toggleExplainReasoning(this.checked)" style="display:none;">
+                                        <span id="explain-toggle-track" style="width:32px;height:18px;border-radius:9px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);position:relative;display:inline-block;transition:all 0.2s;flex-shrink:0;">
+                                            <span id="explain-toggle-thumb" style="position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;background:#888;transition:all 0.2s;display:block;"></span>
+                                        </span>
+                                        <span style="font-size:0.8rem;color:rgba(79,172,254,0.8);white-space:nowrap;"><i class="fa-solid fa-microscope"></i> Explain Reasoning</span>
+                                    </label>
+                                </div>
+                                
+                                <!-- Activity Summary Section -->
+                                <div id="activity-summary" class="activity-summary mb-3">
+                                    <div class="summary-placeholder">Complete your first action to see summary...</div>
+                                </div>
+                                
+                                <!-- Filter Buttons -->
+                                <div class="activity-filters mb-3">
+                                    <button class="filter-btn active" data-filter="all" onclick="filterActivities('all')">
+                                        <i class="fa-solid fa-bars"></i> All
+                                    </button>
+                                    <button class="filter-btn" data-filter="tasks" onclick="filterActivities('tasks')">
+                                        <i class="fa-solid fa-tasks"></i> Tasks
+                                    </button>
+                                    <button class="filter-btn" data-filter="analysis" onclick="filterActivities('analysis')">
+                                        <i class="fa-solid fa-brain"></i> Analysis
+                                    </button>
+                                    <button class="filter-btn" data-filter="status" onclick="filterActivities('status')">
+                                        <i class="fa-solid fa-circle-check"></i> Status
+                                    </button>
+                                </div>
+                                
+                                <!-- Pinned Items Section -->
+                                <div id="pinned-items" class="pinned-section" style="display: none;">
+                                    <div class="pinned-header">
+                                        <i class="fa-solid fa-thumbtack"></i> Pinned Events
+                                    </div>
+                                    <div id="pinned-list" class="pinned-list"></div>
+                                </div>
+                                
+                                <!-- Activity Feed -->
+                                <div id="action-output" class="activity-feed">
+                                    <div class="console-placeholder">Awaiting action commands...</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="right-column">
+                            <div class="glass-panel main-panel">
+                                <h2><i class="fa-solid fa-server"></i> Sub-Agent Status</h2>
+                                <ul class="agent-list" id="agent-status-list">
+                                    <li class="loading-pulse">Loading agent metrics...</li>
+                                </ul>
+                            </div>
+
+                            <div class="glass-panel main-panel mt-2 agent-content-panel">
+                                <div class="agent-panel-header">
+                                    <h2><i class="fa-solid fa-info-circle" id="agent-icon"></i> <span id="agent-title">Agent Details</span></h2>
+                                    <div class="agent-tabs">
+                                        <button class="agent-tab active" data-tab="news-tab" onclick="switchAgentTab('news-tab')">
+                                            <i class="fa-solid fa-newspaper"></i> News
+                                        </button>
+                                        <button class="agent-tab" data-tab="research-tab" onclick="switchAgentTab('research-tab')">
+                                            <i class="fa-solid fa-book"></i> Research
+                                        </button>
+                                        <button class="agent-tab" data-tab="task-tab" onclick="switchAgentTab('task-tab')">
+                                            <i class="fa-solid fa-list"></i> Tasks
+                                        </button>
+                                        <button class="agent-tab" data-tab="schedule-tab" onclick="switchAgentTab('schedule-tab')">
+                                            <i class="fa-solid fa-calendar"></i> Schedule
+                                        </button>
+
+                                    </div>
+                                </div>
+
+                                <div id="news-tab" class="agent-tab-content active">
+                                    <div id="agent-content-news" class="agent-content-body">
+                                        <div class="empty-state">Fetch News Headlines to view articles</div>
+                                    </div>
+                                </div>
+
+                                <div id="research-tab" class="agent-tab-content">
+                                    <div id="agent-content-research" class="agent-content-body">
+                                        <div class="empty-state">Fetch Research Papers to view articles</div>
+                                    </div>
+                                </div>
+
+                                <div id="task-tab" class="agent-tab-content">
+                                    <div id="agent-content-tasks" class="agent-content-body">
+                                        <div class="empty-state">Click Task List to view your tasks</div>
+                                    </div>
+                                </div>
+
+                                <div id="schedule-tab" class="agent-tab-content">
+                                    <div id="agent-content-schedule" class="agent-content-body">
+                                        <div class="empty-state">Click Event Schedule to view your calendar</div>
+                                    </div>
+                                </div>
+
+
+
+                                <div class="audio-player mt-2">
+                                    <div class="audio-controls">
+                                        <button class="btn btn-small" id="play-audio-btn" onclick="playAgentAudio()" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display:none;">
+                                            <i class="fa-solid fa-play"></i> Play Audio Summary
+                                        </button>
+                                        <button class="btn btn-small" id="stop-audio-btn" onclick="stopAgentAudio()" style="background: linear-gradient(135deg, #f59e0b 0%, #ec4899 100%); display:none;">
+                                            <i class="fa-solid fa-stop"></i> Stop Audio
+                                        </button>
+                                    </div>
+                                    <audio id="audio-player" style="width: 100%; margin-top: 10px; display:none;"></audio>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Stat Details Modal -->
+                    <div id="stat-details-overlay" class="stat-details-overlay" style="display: none;">
+                        <div class="stat-details-modal glass-panel">
+                            <button class="close-btn" onclick="closeStatCard()">
+                                <i class="fa-solid fa-times"></i>
+                            </button>
+                            
+                            <div id="workflows-detail" class="stat-detail-content" style="display: none;">
+                                <h2><i class="fa-solid fa-diagram-project"></i> Active Workflows</h2>
+                                <div class="stat-detail-section">
+                                    <div class="stat-detail-item">
+                                        <div class="item-title">Workflow 1: API Documentation</div>
+                                        <div class="item-progress">
+                                            <div class="progress-bar">
+                                                <div class="progress-fill" style="width: 65%;"></div>
+                                            </div>
+                                            <span class="progress-text">65% - Est. 2 days</span>
+                                        </div>
+                                    </div>
+                                    <div class="stat-detail-item">
+                                        <div class="item-title">Workflow 2: UI Redesign</div>
+                                        <div class="item-progress">
+                                            <div class="progress-bar">
+                                                <div class="progress-fill" style="width: 45%;"></div>
+                                            </div>
+                                            <span class="progress-text">45% - Est. 4 days</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="safety-detail" class="stat-detail-content" style="display: none;">
+                                <h2><i class="fa-solid fa-shield-halved"></i> Safety Score Breakdown</h2>
+                                <div class="stat-detail-section">
+                                    <div class="safety-breakdown-item">
+                                        <div class="breakdown-label">PII Safety</div>
+                                        <div class="breakdown-bar">
+                                            <div class="breakdown-fill" style="width: 100%; background: #98fb98;"></div>
+                                        </div>
+                                        <div class="breakdown-value">100%</div>
+                                    </div>
+                                    <div class="safety-breakdown-item">
+                                        <div class="breakdown-label">Goal Alignment</div>
+                                        <div class="breakdown-bar">
+                                            <div class="breakdown-fill" style="width: 96%; background: #87cefa;"></div>
+                                        </div>
+                                        <div class="breakdown-value">96%</div>
+                                    </div>
+                                    <div class="safety-breakdown-item">
+                                        <div class="breakdown-label">Task Ethics</div>
+                                        <div class="breakdown-bar">
+                                            <div class="breakdown-fill" style="width: 94%; background: #ffebcd;"></div>
+                                        </div>
+                                        <div class="breakdown-value">94%</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="completed-detail" class="stat-detail-content" style="display: none;">
+                                <h2><i class="fa-solid fa-circle-check"></i> Completed Tasks</h2>
+                                <div class="stat-detail-section">
+                                    <div class="completed-item">
+                                        <div class="item-title">Write Database Schema Documentation</div>
+                                        <div class="item-meta">
+                                            <span class="item-duration"><i class="fa-solid fa-clock"></i> 2 hours 30 min</span>
+                                            <span class="item-outcome"><i class="fa-solid fa-check"></i> Completed Successfully</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Workflows View -->
+                <div id="workflows" class="view">
+                    <div class="glass-panel main-panel full-height">
+                        <h2><i class="fa-solid fa-diagram-project"></i> Workflow Analysis</h2>
+                        <div id="workflow-container" style="padding: 20px;">
+                            <div class="empty-state">Click "Run Critic Replan Demo" from the Dashboard to analyze workflows!</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Vibe-Checks View -->
+                <div id="vibe-checks" class="view">
+                    <div class="glass-panel main-panel full-height">
+                        <h2><i class="fa-solid fa-shield-halved"></i> Vibe-Check Results</h2>
+                        <div id="vibecheck-container" style="padding: 20px;">
+                            <div class="empty-state">Click "Run Vibe-Check Demo" from the Dashboard to see results!</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Debates View -->
+                <div id="debates" class="view">
+                    <div class="glass-panel main-panel full-height">
+                        <h2><i class="fa-solid fa-comments"></i> Live Agent Debates</h2>
+                        <div class="debate-container" id="debate-container">
+                            <div class="empty-state">No active debates. Trigger one from the Dashboard!</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Agent Reasoning View -->
+                <div id="reasoning" class="view">
+                    <div class="reasoning-layout">
+
+                        <!-- Left: Live thought stream -->
+                        <div class="glass-panel main-panel reasoning-stream-panel">
+                            <div class="reasoning-header">
+                                <h2><i class="fa-solid fa-brain"></i> Live Agent Reasoning</h2>
+                                <div class="reasoning-controls">
+                                    <div class="monitor-status" id="monitor-status">
+                                        <span class="status-dot" id="monitor-dot"></span>
+                                        <span id="monitor-status-text">Idle</span>
+                                    </div>
+                                    <button class="btn btn-primary btn-small" onclick="startReasoningStream()">
+                                        <i class="fa-solid fa-play"></i> Run Scan
+                                    </button>
+                                    <button class="btn btn-secondary btn-small" onclick="clearReasoningFeed()">
+                                        <i class="fa-solid fa-trash"></i> Clear
+                                    </button>
+                                </div>
+                            </div>
+                            <p style="color:#888;font-size:0.85rem;margin:0 0 12px;">
+                                Watch agents think in real time — cross-referencing your tasks, calendar, GitHub, Slack and email to surface bottlenecks before you notice them.
+                            </p>
+                            <div id="reasoning-feed" class="reasoning-feed">
+                                <div class="reasoning-placeholder">
+                                    <i class="fa-solid fa-brain" style="font-size:2rem;opacity:0.2;"></i>
+                                    <p>Click "Run Scan" to watch agents reason through your data…</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right: Notifications -->
+                        <div class="reasoning-right">
+                            <div class="glass-panel main-panel notifications-panel">
+                                <h2><i class="fa-solid fa-bell"></i> Silent Bottlenecks</h2>
+                                <p style="color:#888;font-size:0.85rem;margin:0 0 12px;">
+                                    Issues the agents found proactively — without you asking.
+                                </p>
+                                <div id="notifications-list">
+                                    <div class="empty-state">No bottlenecks detected yet. Run a scan!</div>
+                                </div>
+                            </div>
+
+                            <div class="glass-panel main-panel mt-2">
+                                <h2><i class="fa-solid fa-sitemap"></i> Agent Network</h2>
+                                <div class="agent-network-list" id="agent-network-list">
+                                    <div class="agent-node" data-agent="orchestrator">
+                                        <span class="agent-node-icon">🎯</span>
+                                        <div class="agent-node-info">
+                                            <strong>Orchestrator</strong>
+                                            <span>Coordinates scan</span>
+                                        </div>
+                                        <span class="agent-node-status idle">idle</span>
+                                    </div>
+                                    <div class="agent-node" data-agent="critic">
+                                        <span class="agent-node-icon">🔍</span>
+                                        <div class="agent-node-info">
+                                            <strong>Critic</strong>
+                                            <span>Detects bottlenecks</span>
+                                        </div>
+                                        <span class="agent-node-status idle">idle</span>
+                                    </div>
+                                    <div class="agent-node" data-agent="auditor">
+                                        <span class="agent-node-icon">🛡️</span>
+                                        <div class="agent-node-info">
+                                            <strong>Auditor</strong>
+                                            <span>Validates actions</span>
+                                        </div>
+                                        <span class="agent-node-status idle">idle</span>
+                                    </div>
+                                    <div class="agent-node" data-agent="github">
+                                        <span class="agent-node-icon">🐙</span>
+                                        <div class="agent-node-info">
+                                            <strong>GitHub</strong>
+                                            <span>PR & CI signals</span>
+                                        </div>
+                                        <span class="agent-node-status stub">stub</span>
+                                    </div>
+                                    <div class="agent-node" data-agent="slack">
+                                        <span class="agent-node-icon">💬</span>
+                                        <div class="agent-node-info">
+                                            <strong>Slack</strong>
+                                            <span>Unread mentions</span>
+                                        </div>
+                                        <span class="agent-node-status stub">stub</span>
+                                    </div>
+                                    <div class="agent-node" data-agent="email">
+                                        <span class="agent-node-icon">📧</span>
+                                        <div class="agent-node-info">
+                                            <strong>Email</strong>
+                                            <span>Awaiting replies</span>
+                                        </div>
+                                        <span class="agent-node-status stub">stub</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Thought Trace Sidebar (outside app-container, fixed position) -->
+    <div id="thought-trace-sidebar" class="thought-trace-sidebar">
+        <div class="trace-sidebar-header">
+            <div class="trace-title">
+                <i class="fa-solid fa-brain"></i>
+                <span>Agent Thought Trace</span>
+            </div>
+            <div class="trace-controls">
+                <span class="trace-live-dot" id="trace-live-dot"></span>
+                <span id="trace-live-label" style="font-size:0.72rem;color:#888;">connecting…</span>
+                <button class="trace-clear-btn" onclick="clearThoughtTrace()" title="Clear">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+                <button class="trace-close-btn" onclick="toggleThoughtTrace()" title="Close">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+        </div>
+        <div class="trace-legend">
+            <span class="trace-chip orchestrator">Orchestrator</span>
+            <span class="trace-chip critic">Critic</span>
+            <span class="trace-chip auditor">Auditor</span>
+            <span class="trace-chip task">Task</span>
+            <span class="trace-chip scheduler">Scheduler</span>
+            <span class="trace-chip research">Research</span>
+        </div>
+        <div id="thought-trace-feed" class="thought-trace-feed">
+            <div class="trace-placeholder">
+                <i class="fa-solid fa-brain" style="font-size:1.6rem;opacity:0.15;"></i>
+                <p>Waiting for agent activity…<br>Submit a goal to see live reasoning.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar overlay for mobile -->
+    <div id="trace-overlay" class="trace-overlay" onclick="toggleThoughtTrace()"></div>
+
+    <!-- Task Creation Modal -->
+    <div id="task-modal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="task-modal-title"><i class="fa-solid fa-tasks"></i> Create New Task</h2>
+                <button class="modal-close" onclick="closeTaskModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Task Title</label>
+                    <input type="text" id="task-title" placeholder="Enter task title" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="task-description" placeholder="Task description..." class="form-input" rows="3"></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Priority</label>
+                        <select id="task-priority" class="form-input">
+                            <option value="low">Low</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="high">High</option>
+                            <option value="critical">Critical</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Due Date</label>
+                        <input type="date" id="task-due-date" class="form-input">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeTaskModal()">Cancel</button>
+                <button id="task-submit-btn" class="btn btn-primary" onclick="submitTaskForm()">
+                    <i class="fa-solid fa-plus"></i> Create Task
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Event Creation Modal -->
+    <div id="event-modal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-calendar"></i> Schedule New Event</h2>
+                <button class="modal-close" onclick="closeEventModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Event Name</label>
+                    <input type="text" id="event-name" placeholder="Enter event name" class="form-input">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Date</label>
+                        <input type="date" id="event-date" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label>Time</label>
+                        <input type="time" id="event-time" class="form-input">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Duration (minutes)</label>
+                    <input type="number" id="event-duration" placeholder="30" class="form-input" value="60">
+                </div>
+                <div class="form-group">
+                    <label>Attendees</label>
+                    <input type="text" id="event-attendees" placeholder="email1@example.com, email2@example.com" class="form-input">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeEventModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="submitNewEvent()">
+                    <i class="fa-solid fa-plus"></i> Schedule Event
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Note Creation Modal -->
+    <div id="note-modal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-note-sticky"></i> Create New Note</h2>
+                <button class="modal-close" onclick="closeNoteModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Note Title</label>
+                    <input type="text" id="note-title" placeholder="Enter note title" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label>Note Content</label>
+                    <textarea id="note-content" placeholder="Write your note here..." class="form-input" rows="5"></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Category</label>
+                        <input type="text" id="note-category" placeholder="e.g., Work, Personal, Ideas" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label>Tags</label>
+                        <input type="text" id="note-tags" placeholder="e.g., important, meeting, review" class="form-input">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeNoteModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="submitNewNote()">
+                    <i class="fa-solid fa-plus"></i> Create Note
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer style="position: fixed; bottom: 0; left: 0; right: 0; text-align: center; padding: 15px; background: rgba(0,0,0,0.3); backdrop-filter: blur(10px); border-top: 1px solid rgba(100,200,255,0.2); height: auto; pointer-events: none;">
+    </footer>
+
+    <style>
+        body {
+            padding-bottom: 70px;
+        }
+    </style>
+
+    <script src="/static/app.js"></script>
+</body>
+
+</html>
