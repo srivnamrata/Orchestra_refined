@@ -498,24 +498,52 @@ html.dark .qchip {
   flex-shrink: 0;
 }
 .goal-box {
+  position: relative;
   background: var(--md-surface);
-  border: 2px solid var(--md-surface-3);
   border-radius: var(--radius-lg);
   padding: 12px 14px;
   transition: all 0.3s cubic-bezier(.4,0,.2,1);
   box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-  animation: entryPulse 2s ease-out;
+  z-index: 1;
+  overflow: visible; /* Needed for the glow */
 }
-@keyframes entryPulse {
-  0% { box-shadow: 0 0 0 10px rgba(26,115,232,0.1); border-color: var(--g-blue); }
-  70% { box-shadow: 0 0 0 15px transparent; border-color: var(--g-blue); }
-  100% { box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-color: var(--md-surface-3); }
+
+/* The Rainbow Gradient Border */
+.goal-box::before {
+  content: '';
+  position: absolute;
+  inset: -2px; /* Border thickness */
+  padding: 2px;
+  background: conic-gradient(
+    from 0deg,
+    #4285f4, #34a853, #fbbc05, #ea4335, #4285f4
+  );
+  -webkit-mask: 
+     linear-gradient(#fff 0 0) content-box, 
+     linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  border-radius: calc(var(--radius-lg) + 2px);
+  opacity: 0.6;
+  transition: opacity 0.3s;
+  animation: rotateRainbow 4s linear infinite;
+  z-index: -1;
 }
+
+@keyframes rotateRainbow {
+  from { filter: hue-rotate(0deg); }
+  to { filter: hue-rotate(360deg); }
+}
+
 .goal-box:focus-within {
-  border-color: var(--g-blue);
-  box-shadow: 0 8px 24px rgba(26,115,232,0.15);
-  background: var(--md-surface);
+  box-shadow: 0 12px 32px rgba(66,133,244,0.18);
   transform: translateY(-2px);
+}
+
+.goal-box:focus-within::before {
+  opacity: 1;
+  inset: -3px; /* Slightly thicker on focus */
+  padding: 3px;
 }
 .goal-input {
   width: 100%; background: none; border: none; outline: none;
