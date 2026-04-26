@@ -20,6 +20,8 @@ import uuid
 from backend.agents.orchestrator_agent import OrchestratorAgent, WorkflowRequest
 from backend.agents.critic_agent import CriticAgent
 from backend.agents.auditor_agent import AuditorAgent
+from backend.agents.scheduler_agent import SchedulerAgent
+from backend.agents.librarian_agent import LibrarianAgent
 from backend.agents.debate_engine import MultiAgentDebateEngine, DebateParticipant
 from backend.agents.research_agent import ResearchAgent
 from backend.agents.proactive_monitor_agent import ProactiveMonitorAgent
@@ -144,11 +146,6 @@ proactive_monitor = ProactiveMonitorAgent(
 
 # Register sub-agents (scheduler, task executor, etc.)
 # These would be actual agent implementations
-class MockSchedulerAgent:
-    async def execute(self, step, previous_results):
-        logger.info(f"MockSchedulerAgent executing: {step.get('name')}")
-        return {"scheduled": True}
-
 class MockTaskAgent:
     async def execute(self, step, previous_results):
         logger.info(f"MockTaskAgent executing: {step.get('name')}")
@@ -159,9 +156,10 @@ class MockKnowledgeAgent:
         logger.info(f"MockKnowledgeAgent executing: {step.get('name')}")
         return {"context_gathered": True}
 
-orchestrator.register_sub_agent("scheduler", MockSchedulerAgent())
+orchestrator.register_sub_agent("scheduler", SchedulerAgent(llm_service))
 orchestrator.register_sub_agent("task", MockTaskAgent())
 orchestrator.register_sub_agent("knowledge", MockKnowledgeAgent())
+orchestrator.register_sub_agent("librarian", LibrarianAgent(llm_service))
 
 # Register new real agents
 orchestrator.register_sub_agent("research", ResearchAgent(knowledge_graph))
@@ -224,6 +222,37 @@ async def startup_event():
     # Start proactive monitor background loop
     proactive_monitor.start()
     logger.info("✅ Proactive Monitor Agent started")
+
+
+@app.get("/api/books")
+async def get_books(status: Optional[str] = None):
+    from backend.database import get_all_books
+    books = get_all_books(status=status)
+    return [
+        {
+            "id": b.book_id,
+            "title": b.title,
+            "author": b.author,
+            "status": b.status,
+            "current_page": b.current_page,
+            "total_pages": b.total_pages,
+            "pct": int((b.current_page / b.total_pages) * 100) if b.total_pages > 0 else 0,
+            "updated_at": b.updated_at.isoformat()
+        }
+        for b in books
+    ]
+
+@app.post("/api/books")
+async def create_book(data: Dict):
+    from backend.database import create_book_in_db
+    import uuid
+    b = create_book_in_db(
+        book_id=f"book-{uuid.uuid4().hex[:6]}",
+        title=data["title"],
+        author=data.get("author"),
+        total_pages=data.get("total_pages", 300)
+    )
+    return {"status": "success", "id": b.book_id}
 
 
 @app.get("/", include_in_schema=False)

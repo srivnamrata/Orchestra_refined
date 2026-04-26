@@ -2032,6 +2032,7 @@ html.dark .completion-toast { box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1p
     <div class="nav-item" onclick="window.switchView('slack')"><span class="ms">forum</span> Slack <span class="nav-badge nb-blue">stub</span></div>
     <div class="nav-item" onclick="window.switchView('email')"><span class="ms">mail</span> Email <span class="nav-badge nb-blue">stub</span></div>
     <div class="nav-item" onclick="window.switchView('discovery')"><span class="ms">dynamic_form</span> Discovery Lab <span class="nav-badge nb-violet">MCP</span></div>
+    <div class="nav-item" onclick="window.switchView('library')"><span class="ms">library_books</span> Library <span class="nav-badge nb-blue">Alexandria</span></div>
   </nav>
 
   <!-- Quick Actions -->
@@ -2367,6 +2368,20 @@ html.dark .completion-toast { box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1p
             </div>
           </div>
         </div>
+    <div id="library" class="view">
+      <div class="library-container" style="padding:24px">
+        <div class="view-header" style="margin-bottom:32px; display:flex; justify-content:space-between; align-items:center">
+          <div>
+            <h2 style="color:var(--md-on-surface)">Alexandria Library</h2>
+            <p style="color:var(--md-dim)">Tracking your reading progress and personal knowledge base.</p>
+          </div>
+          <button class="goal-run" onclick="activityFeed.log('Manual book entry not yet available. Use Alexandria chat.','info','SYSTEM')"><span class="ms sm">add</span> Add Book</button>
+        </div>
+        <div id="bookshelf" class="books-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:24px">
+           <!-- Populated by app.js -->
+        </div>
+      </div>
+    </div>
 
       </div>
     </div>
@@ -2620,5 +2635,63 @@ html.dark .completion-toast { box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1p
   script.defer = true;
   document.body.appendChild(script);
 })();
+
+window.fetchBooks = async function() {
+    const bookshelf = document.getElementById('bookshelf');
+    if (!bookshelf) return;
+
+    try {
+        const res = await fetch('/api/books');
+        const books = await res.json();
+        
+        if (books.length === 0) {
+            bookshelf.innerHTML = `
+                <div class="empty-state" style="grid-column: 1/-1; padding:60px; text-align:center; background:var(--md-surface-1); border-radius:16px">
+                    <div class="ms" style="font-size:48px; color:var(--md-dim); margin-bottom:12px">menu_book</div>
+                    <p style="color:var(--md-dim)">Your bookshelf is empty. Start by telling Alexandria what you are reading!</p>
+                </div>
+            `;
+            return;
+        }
+
+        bookshelf.innerHTML = books.map(b => `
+            <div class="mcp-tool-card anim a1" style="border-top:4px solid ${b.status === 'completed' ? 'var(--g-green)' : 'var(--g-blue)'}">
+                <div style="display:flex; justify-content:space-between; margin-bottom:12px">
+                    <div class="chip ${b.status}">${b.status.replace('-', ' ')}</div>
+                    <div style="font-size:10px; color:var(--md-dim)">${new Date(b.updated_at).toLocaleDateString()}</div>
+                </div>
+                <div style="font-weight:800; font-size:16px; margin-bottom:4px; color:var(--md-on-surface)">${b.title}</div>
+                <div style="font-size:12px; color:var(--md-dim); margin-bottom:16px">${b.author || 'Unknown Author'}</div>
+                
+                <div style="margin-bottom:8px; display:flex; justify-content:space-between; font-size:11px">
+                    <span>Progress</span>
+                    <span>${b.current_page} / ${b.total_pages} pages</span>
+                </div>
+                <div style="width:100%; height:6px; background:var(--md-surface-3); border-radius:10px; overflow:hidden">
+                    <div style="width:${b.pct}%; height:100%; background:var(--g-blue); border-radius:10px"></div>
+                </div>
+            </div>
+        `).join('');
+    } catch (e) {
+        console.error('Fetch books failed:', e);
+    }
+};
+
+// Update initUI to fetch books
+const originalInit = window.initUI;
+window.initUI = function() {
+    if (originalInit) originalInit();
+    window.fetchBooks();
+};
+
+// Trigger logic (example placeholder for integration)
+const originalSubmitGoal = window.submitGoal;
+window.submitGoal = function(goal) {
+    if (goal.toLowerCase().includes('alexandria')) {
+        console.log('Alexandria trigger activated');
+        window.fetchBooks();
+    }
+    if (originalSubmitGoal) originalSubmitGoal(goal);
+};
 </script>
 </body></html>

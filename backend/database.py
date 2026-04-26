@@ -167,6 +167,20 @@ class WorkflowHistory(Base):
     error          = Column(Text,       nullable=True)
 
 
+class Book(Base):
+    __tablename__ = "books"
+    id           = Column(Integer,     primary_key=True, index=True)
+    book_id      = Column(String(32),  unique=True, index=True, nullable=False)
+    title        = Column(String(255), index=True,  nullable=False)
+    author       = Column(String(255), index=True,  nullable=True)
+    status       = Column(String(20),  default="to-read") # to-read, in-progress, completed
+    current_page = Column(Integer,     default=0)
+    total_pages  = Column(Integer,     default=1)
+    created_at   = Column(DateTime,    default=datetime.utcnow, index=True)
+    updated_at   = Column(DateTime,    default=datetime.utcnow, onupdate=datetime.utcnow)
+    finished_at  = Column(DateTime,    nullable=True)
+
+
 # ============================================================================
 # INIT
 # ============================================================================
@@ -416,5 +430,48 @@ def get_workflow_history(limit=50):
         return db.query(WorkflowHistory)\
                  .order_by(WorkflowHistory.created_at.desc())\
                  .limit(limit).all()
+    finally:
+        db.close()
+
+
+# ============================================================================
+# BOOKS (ALEXANDRIA)
+# ============================================================================
+
+def create_book_in_db(book_id, title, author=None, status="to-read", total_pages=1):
+    db = SessionLocal()
+    try:
+        b = Book(book_id=book_id, title=title, author=author, status=status, total_pages=total_pages)
+        db.add(b); db.commit(); db.refresh(b)
+        return b
+    except Exception as e:
+        db.rollback(); raise
+    finally:
+        db.close()
+
+
+def get_all_books(limit=100, status=None):
+    db = SessionLocal()
+    try:
+        q = db.query(Book)
+        if status: q = q.filter(Book.status == status)
+        return q.order_by(Book.updated_at.desc()).limit(limit).all()
+    finally:
+        db.close()
+
+
+def update_book_progress(book_id, current_page, status=None):
+    db = SessionLocal()
+    try:
+        b = db.query(Book).filter(Book.book_id == book_id).first()
+        if b:
+            b.current_page = current_page
+            if status: b.status = status
+            if status == "completed": b.finished_at = datetime.utcnow()
+            b.updated_at = datetime.utcnow()
+            db.commit()
+        return b
+    except Exception as e:
+        db.rollback(); raise
     finally:
         db.close()
