@@ -155,6 +155,11 @@ const activityFeed = {
                             `).join('')}
                         </tbody>
                     </table>
+                    <div class="export-group" style="margin-top:10px; display:flex; gap:8px">
+                        <button class="export-btn" onclick="activityFeed.log('Pushing to Jira...','status','SYSTEM')">Push to Jira</button>
+                        <button class="export-btn" onclick="exportTasks('csv', ${JSON.stringify(w.data).replace(/"/g, '&quot;')})">CSV</button>
+                        <button class="export-btn" onclick="exportTasks('json', ${JSON.stringify(w.data).replace(/"/g, '&quot;')})">JSON</button>
+                    </div>
                 </div>
             `;
         }
@@ -725,6 +730,44 @@ function initUI() {
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
+window.exportTasks = function(format) {
+    const tasks = window._currentTasks || [];
+    if (tasks.length === 0) {
+        activityFeed.log('No tasks available to export.', 'warning', 'SYSTEM');
+        return;
+    }
+
+    let content = '';
+    let mimeType = 'text/plain';
+    let filename = `orchestra_tasks_${new Date().toISOString().split('T')[0]}`;
+
+    if (format === 'csv') {
+        const headers = ['ID', 'Title', 'Priority', 'Status', 'Due Date'];
+        const rows = tasks.map(t => [t.task_id, t.title, t.priority, t.status, t.due_date].join(','));
+        content = [headers.join(','), ...rows].join('\n');
+        mimeType = 'text/csv';
+        filename += '.csv';
+    } else {
+        content = JSON.stringify(tasks, null, 2);
+        mimeType = 'application/json';
+        filename += '.json';
+    }
+
+    downloadBlob(content, mimeType, filename);
+    activityFeed.log(`Successfully exported ${tasks.length} tasks as ${format.toUpperCase()}.`, 'success', 'SYSTEM');
+};
+
+function downloadBlob(content, mimeType, filename) {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
 window.setGoal = function(t) {
     const inp = document.getElementById('nl-goal-input');
     if (inp) { inp.value = t; inp.focus(); window.autoExpandGoal(inp); }
