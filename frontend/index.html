@@ -1347,6 +1347,56 @@ html.dark .feed-body#action-output .activity-item {
 .mcp-tool-title { font-weight: 700; font-size: 13px; margin-bottom: 4px; display:flex; align-items:center; gap:8px; }
 .mcp-tool-desc { font-size: 11px; color: var(--md-dim); margin-bottom: 12px; }
 
+/* ── Debate UI (Conflict Resolution) ── */
+.debate-card {
+  background: var(--md-surface);
+  border-radius: 16px;
+  border: 1px solid var(--md-surface-3);
+  overflow: hidden;
+}
+.debate-header {
+  padding: 16px;
+  background: var(--md-surface-2);
+  border-bottom: 1px solid var(--md-surface-3);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.debate-title { font-weight: 700; font-size: 14px; }
+.debate-body { padding: 16px; }
+.debate-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  align-items: flex-start;
+}
+.dr-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 800;
+  font-size: 14px;
+}
+.dr-content { flex: 1; }
+.dr-agent { font-weight: 700; font-size: 12px; margin-bottom: 2px; }
+.dr-pos { font-size: 11px; color: var(--md-on-surface); }
+.vote-chip {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  margin-left: 8px;
+}
+.v-support { background: var(--g-green-light); color: var(--g-green); }
+.v-concern { background: var(--g-amber-light); color: var(--g-amber); }
+.v-oppose  { background: var(--g-red-light); color: var(--g-red); }
+
+
 
 
 

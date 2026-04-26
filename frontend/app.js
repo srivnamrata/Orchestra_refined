@@ -186,6 +186,29 @@ const activityFeed = {
                 </div>
             `;
         }
+        if (w.type === 'debate-card') {
+            return `
+                <div class="debate-card">
+                    <div class="debate-header">
+                        <div class="debate-title">${w.title}</div>
+                        <div class="consensus-badge" style="background:var(--g-blue-light); color:var(--g-blue); padding:4px 10px; border-radius:20px; font-size:10px; font-weight:800">
+                            ${w.consensus}% Consensus
+                        </div>
+                    </div>
+                    <div class="debate-body" style="padding:16px">
+                        ${w.rounds.map(r => `
+                            <div class="debate-row" style="display:flex; gap:12px; margin-bottom:12px">
+                                <div class="dr-avatar" style="width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; color:white; font-weight:800; background:${r.color}">${r.agent.charAt(0)}</div>
+                                <div class="dr-content">
+                                    <div class="dr-agent" style="font-weight:700; font-size:12px">${r.agent} <span class="vote-chip v-${r.vote.toLowerCase()}">${r.vote}</span></div>
+                                    <div class="dr-pos" style="font-size:11px; color:var(--md-on-surface)">${r.message}</div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
         return `<div class="gen-widget">Unknown widget type: ${w.type}</div>`;
     },
 
@@ -255,6 +278,24 @@ window.submitGoal = async function() {
                 { type: 'metric', detail: 'Conversion rate on mobile is currently -12%' }
             ]
         });
+        textarea.value = '';
+        return;
+    }
+
+    if (goal.toLowerCase().includes('deploy to prod')) {
+        activityFeed.log('Detected high-stakes action. Triggering Multi-Agent Debate Engine...', 'warning', 'SYSTEM');
+        setTimeout(() => {
+            activityFeed.log('Conflict detected between Speed and Security agents. Resolving via Consensus Protocol.', 'status', 'ORCHESTRATOR', {
+                type: 'debate-card',
+                title: 'Decision: Deploy API v2.4',
+                consensus: 85,
+                rounds: [
+                    { agent: 'DevOps', vote: 'SUPPORT', color: 'var(--g-blue)', message: 'All integration tests passed. Readiness at 98%.' },
+                    { agent: 'Security', vote: 'CONCERN', color: 'var(--g-amber)', message: 'Found 2 low-risk CVEs. Recommending manual sign-off.' },
+                    { agent: 'Architect', vote: 'SUPPORT', color: 'var(--g-violet)', message: 'Migration strategy is sound. Rollback plan verified.' }
+                ]
+            });
+        }, 1500);
         textarea.value = '';
         return;
     }
