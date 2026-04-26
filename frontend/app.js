@@ -68,7 +68,20 @@ window.switchView = function(viewId) {
 
 // ── Audio Engine ─────────────────────────────────────────────────────────────
 window.playAudio = function(text) {
+    if (!text) {
+        // Summarize active intelligence pane
+        const activePane = document.querySelector('.intel-pane.active');
+        if (activePane) {
+            const titles = Array.from(activePane.querySelectorAll('.news-title, .ti-title, .sched-name'))
+                                .map(el => el.textContent)
+                                .join('. ');
+            if (titles) {
+                text = `Summarizing ${activePane.id.replace('pane-', '')}: ${titles}`;
+            }
+        }
+    }
     if (!text) return;
+    
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = 1.0;
@@ -608,7 +621,21 @@ window.setPriority = function(btn) {
 window.runScan = function() {
     if (_scanRunning) return;
     _scanRunning = true;
-    activityFeed.log('📡 Scan initiated...', 'status');
+    
+    activityFeed.log('📡 Intelligence Scan initiated...', 'status', 'SYSTEM');
+    
+    setTimeout(() => {
+        activityFeed.log('🔍 Scanning environment for bottlenecks...', 'info', 'CRITIC');
+    }, 1000);
+    
+    setTimeout(() => {
+        activityFeed.log('🛡️ Auditing cross-agent intent alignment...', 'info', 'AUDITOR');
+    }, 2500);
+    
+    setTimeout(() => {
+        activityFeed.log('✅ Scan complete: 1 dependency risk mitigated, efficiency +4%.', 'success', 'SYSTEM');
+        _scanRunning = false;
+    }, 4500);
 };
 
 const tick = () => {

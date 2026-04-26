@@ -1706,9 +1706,9 @@ html.dark .completion-toast { box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1p
     <div class="nav-item" onclick="window.switchView('debates')"><span class="ms">swords</span> Debates</div>
     <div class="nav-item" onclick="window.switchView('settings')"><span class="ms">shield</span> Safety Audit</div>
     <div class="nav-label">Integrations</div>
-    <div class="nav-item"><span class="ms">code</span> GitHub <span class="nav-badge nb-gray">stub</span></div>
-    <div class="nav-item"><span class="ms">forum</span> Slack <span class="nav-badge nb-gray">stub</span></div>
-    <div class="nav-item"><span class="ms">mail</span> Email <span class="nav-badge nb-gray">stub</span></div>
+    <div class="nav-item" onclick="window.switchView('github')"><span class="ms">code</span> GitHub <span class="nav-badge nb-blue">stub</span></div>
+    <div class="nav-item" onclick="window.switchView('slack')"><span class="ms">forum</span> Slack <span class="nav-badge nb-blue">stub</span></div>
+    <div class="nav-item" onclick="window.switchView('email')"><span class="ms">mail</span> Email <span class="nav-badge nb-blue">stub</span></div>
   </nav>
 
   <!-- Quick Actions -->
@@ -2058,6 +2058,9 @@ html.dark .completion-toast { box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1p
             <button class="intel-tab" onclick="fetchIntel('research',this)">🔬 Research <span class="intel-tab-count">4</span></button>
             <button class="intel-tab" onclick="fetchIntel('tasks',this)">✅ Tasks <span class="intel-tab-count">6</span></button>
             <button class="intel-tab" onclick="fetchIntel('schedule',this)">📅 Schedule <span class="intel-tab-count">4</span></button>
+            <button class="intel-tab" onclick="fetchIntel('github',this)">🐙 GitHub <span class="intel-tab-count">2</span></button>
+            <button class="intel-tab" onclick="fetchIntel('slack',this)">💬 Slack <span class="intel-tab-count">2</span></button>
+            <button class="intel-tab" onclick="fetchIntel('email',this)">📧 Email <span class="intel-tab-count">1</span></button>
           </div>
         </div>
         <div class="intel-head-right">
@@ -2105,6 +2108,46 @@ html.dark .completion-toast { box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1p
             <div class="sched-item now"><div class="sched-time">14:00</div><div><div class="sched-name">API Documentation review</div><div class="sched-detail">30 min · Google Meet · 3 attendees</div></div><span class="sched-tag" style="background:var(--g-green-light);color:var(--g-green);border:1px solid rgba(30,142,62,0.3)">● Now</span></div>
             <div class="sched-item"><div class="sched-time">15:30</div><div><div class="sched-name">UI Redesign kickoff — Product &amp; Eng</div><div class="sched-detail">60 min · Google Meet · 8 attendees</div></div><span class="sched-tag" style="background:var(--g-blue-light);color:var(--g-blue)">Upcoming</span></div>
             <div class="sched-item"><div class="sched-time">17:00</div><div><div class="sched-name">1:1 — Q2 planning</div><div class="sched-detail">30 min · In-person</div></div><span class="sched-tag" style="background:var(--g-blue-light);color:var(--g-blue)">Upcoming</span></div>
+          </div>
+        </div>
+
+        <div class="intel-pane" id="pane-github">
+          <div class="intel-source-label">GitHub · Repository Activity</div>
+          <div class="news-grid">
+            <div class="news-card nc-github" style="border-left:4px solid var(--md-on-surface)">
+              <div class="news-source-row"><div class="news-favicon" style="background:#24292e;color:white">G</div><span class="news-source-name">orchestra-core</span></div>
+              <div class="news-title">PR #42: Integration with Vertex AI Gemini 1.5</div>
+              <div class="news-meta" style="color:var(--g-green)">✓ Checks passed · 2 approvals</div>
+            </div>
+            <div class="news-card nc-github" style="border-left:4px solid var(--md-on-surface)">
+              <div class="news-source-row"><div class="news-favicon" style="background:#24292e;color:white">G</div><span class="news-source-name">orchestra-ui</span></div>
+              <div class="news-title">Issue #108: Mobile responsive dashboard navigation</div>
+              <div class="news-meta" style="color:var(--g-amber)">⚠️ Blocked by design review</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="intel-pane" id="pane-slack">
+          <div class="intel-source-label">Slack · #engineering-hq</div>
+          <div class="task-intel-grid">
+            <div class="task-intel-item">
+              <div class="ti-check" style="background:var(--g-violet); color:white">#</div>
+              <div><div class="ti-title">Discussed API rate limits for the new crawler</div><div style="display:flex;gap:6px;margin-top:4px"><span class="ti-priority" style="background:var(--g-violet-light);color:var(--g-violet)">summarized</span></div></div>
+            </div>
+            <div class="task-intel-item">
+              <div class="ti-check" style="background:var(--g-violet); color:white">#</div>
+              <div><div class="ti-title">Confirmed deployment window for v1.2.0</div><div style="display:flex;gap:6px;margin-top:4px"><span class="ti-priority" style="background:var(--g-violet-light);color:var(--g-violet)">decision</span></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="intel-pane" id="pane-email">
+          <div class="intel-source-label">Gmail · Urgent Summaries</div>
+          <div class="task-intel-grid">
+            <div class="task-intel-item">
+              <div class="ti-check" style="background:var(--g-red); color:white">M</div>
+              <div><div class="ti-title">Client feedback regarding the Q1 report latency</div><div style="display:flex;gap:6px;margin-top:4px"><span class="ti-priority" style="background:var(--g-red-light);color:var(--g-red)">high priority</span></div></div>
+            </div>
           </div>
         </div>
 
