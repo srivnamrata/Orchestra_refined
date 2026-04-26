@@ -164,7 +164,7 @@ window.orchOnboard = {
     const goalEl = document.getElementById('orchObGoalInput');
     if(goalEl && goalEl.value.trim()) {
       // Pre-fill the main goal input — adjust selector to match yours
-      const mainInput = document.querySelector('#goal-input, .goal-input, textarea[name="goal"]');
+      const mainInput = document.querySelector('#nl-goal-input, #goal-input, .goal-input, textarea[name="goal"]');
       if(mainInput) mainInput.value = goalEl.value.trim();
     }
     document.getElementById('orchOnboardOverlay').classList.remove('open');

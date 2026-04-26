@@ -46,7 +46,8 @@ window.switchView = function(viewId) {
                         (viewId === 'trace' && text.includes('agent reasoning')) ||
                         (viewId === 'vibe-checks' && text.includes('vibe checks')) ||
                         (viewId === 'debates' && text.includes('debates')) ||
-                        (viewId === 'settings' && (text.includes('settings') || text.includes('safety audit')));
+                        (viewId === 'settings' && (text.includes('settings') || text.includes('safety audit'))) ||
+                        (viewId === 'agents' && text.includes('agent health'));
         item.classList.toggle('active', matches);
     });
 
@@ -66,6 +67,29 @@ window.switchView = function(viewId) {
     }
 
     if (viewId === 'library') window.fetchBooks();
+    if (viewId === 'guru' && document.getElementById('guru-audit-container')?.querySelector('.run-card')) {
+        // already loaded, do nothing
+    }
+};
+
+// ── Veda chat submission ─────────────────────────────────────────────────────
+window.submitVeda = async function(text) {
+    const inp = document.getElementById('veda-input');
+    if (!text || !text.trim()) return;
+    if (inp) inp.value = '';
+    activityFeed.log(`📚 Veda: processing "${text}"`, 'status', 'VEDA');
+    try {
+        const res = await fetch(apiUrl('/orchestrate/stream'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ goal: `Veda: ${text}`, priority: 'medium' })
+        });
+        if (res.ok) {
+            setTimeout(() => window.fetchBooks(), 2000);
+        }
+    } catch(e) {
+        activityFeed.log('📚 Veda: ' + e.message, 'warning', 'VEDA');
+    }
 };
 
 // ── Audio Engine ─────────────────────────────────────────────────────────────
@@ -1039,14 +1063,18 @@ function initUI() {
         window.runDemo('research');
     }, 500);
 
-    // Initialize Agent Health Bars
+    // Animate Agent Health Bars: reset to 0 then fill up
+    const healthData = { ah1: '72%', ah2: '55%', ah3: '88%', ah4: '40%' };
+    Object.keys(healthData).forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.width = '0%';
+    });
     setTimeout(() => {
-        const healthData = { ah1: '72%', ah2: '55%', ah3: '88%', ah4: '40%' };
         Object.keys(healthData).forEach(id => {
             const el = document.getElementById(id);
             if (el) el.style.width = healthData[id];
         });
-    }, 800);
+    }, 300);
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
