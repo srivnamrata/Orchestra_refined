@@ -174,6 +174,12 @@ window.orchOnboard = {
 
 // Show on first visit
 let done; try { done = localStorage.getItem('orch-onboarded'); } catch(e){}
-if(!done) setTimeout(() => window.orchOnboard.open(), 600);
+if(!done) setTimeout(() => window.orchOnboard.open(), 800);
+
+// Restart tour — callable from Ctrl+K palette or anywhere
+window.restartTour = function() {
+  try { localStorage.removeItem('orch-onboarded'); } catch(e){}
+  window.orchOnboard.open();
+};
 
 })();

@@ -295,6 +295,22 @@ async def create_book(data: Dict):
     return {"status": "success", "id": b.book_id}
 
 
+@app.post("/api/veda", tags=["Veda"])
+async def veda_command(data: Dict):
+    """Natural language book management via Veda Librarian agent."""
+    text = data.get("text", "").strip()
+    if not text:
+        return {"status": "error", "message": "No text provided"}
+    if not veda_librarian:
+        return {"status": "error", "message": "Veda agent not initialized"}
+    try:
+        result = await veda_librarian.process_command(text)
+        return {"status": "success", "result": result}
+    except Exception as e:
+        logger.error(f"Veda command error: {e}")
+        return {"status": "error", "message": str(e)}
+
+
 @app.post("/api/guru/audit", tags=["Guru"])
 async def guru_life_audit():
     """Param Mitra life audit — pulls real data from git, email, tasks, and books."""

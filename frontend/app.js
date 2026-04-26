@@ -73,7 +73,7 @@ function showCompletionToast(goalText) {
 // ── Navigation & View Management ─────────────────────────────────────────────
 window.switchView = function(viewId) {
     console.log(`Switching View: ${viewId}`);
-    
+
     // Update Sidebar Navigation
     document.querySelectorAll('.sidebar-nav .nav-item').forEach(item => {
         const text = item.textContent.trim().toLowerCase();
@@ -94,7 +94,7 @@ window.switchView = function(viewId) {
         v.classList.remove('active');
         v.style.display = 'none';
     });
-    
+
     const viewEl = document.getElementById(viewId) || document.getElementById('dashboard');
     if (viewEl) {
         viewEl.classList.add('active');
@@ -104,10 +104,11 @@ window.switchView = function(viewId) {
         }
     }
 
+    // Back to Dashboard bar
+    const bar = document.getElementById('back-dash-bar');
+    if (bar) bar.style.display = (viewId === 'dashboard') ? 'none' : 'flex';
+
     if (viewId === 'library') window.fetchBooks();
-    if (viewId === 'guru' && document.getElementById('guru-audit-container')?.querySelector('.run-card')) {
-        // already loaded, do nothing
-    }
 };
 
 // ── Veda chat submission ─────────────────────────────────────────────────────
@@ -117,13 +118,18 @@ window.submitVeda = async function(text) {
     if (inp) inp.value = '';
     activityFeed.log(`📚 Veda: processing "${text}"`, 'status', 'VEDA');
     try {
-        const res = await fetch(apiUrl('/orchestrate/stream'), {
+        const res = await fetch(apiUrl('/api/veda'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ goal: `Veda: ${text}`, priority: 'medium' })
+            body: JSON.stringify({ text })
         });
-        if (res.ok) {
-            setTimeout(() => window.fetchBooks(), 2000);
+        const data = await res.json();
+        if (data.status === 'success') {
+            const msg = data.result?.message || 'Done!';
+            activityFeed.log(`📚 Veda: ${msg}`, 'success', 'VEDA');
+            setTimeout(() => window.fetchBooks(), 800);
+        } else {
+            activityFeed.log(`📚 Veda: ${data.message || 'Something went wrong'}`, 'warning', 'VEDA');
         }
     } catch(e) {
         activityFeed.log('📚 Veda: ' + e.message, 'warning', 'VEDA');
@@ -1102,6 +1108,16 @@ function initUI() {
         });
     });
 
+    // Inject back-to-dashboard bar (shows on all non-dashboard views)
+    const content = document.querySelector('.content');
+    if (content && !document.getElementById('back-dash-bar')) {
+        const bar = document.createElement('div');
+        bar.id = 'back-dash-bar';
+        bar.style.cssText = 'display:none;align-items:center;gap:8px;padding:8px 0 2px;flex-shrink:0';
+        bar.innerHTML = `<button onclick="window.switchView('dashboard')" style="display:flex;align-items:center;gap:6px;background:none;border:1px solid var(--md-surface-2);border-radius:var(--radius-full);padding:5px 14px;font-size:12px;font-weight:600;color:var(--md-muted);cursor:pointer;transition:all 0.15s" onmouseover="this.style.color='var(--md-on-surface)'" onmouseout="this.style.color='var(--md-muted)'"><span class="ms" style="font-size:14px">arrow_back</span> Dashboard</button>`;
+        content.insertBefore(bar, content.firstChild);
+    }
+
     window.switchView('dashboard');
     activityFeed.log('System ready. Orchestra MD3.', 'status');
 
@@ -1317,38 +1333,86 @@ window.setPriority = function(btn) {
 window.runScan = async function(btn) {
     if (_scanRunning) return;
     _scanRunning = true;
-    
+
     const scanBtn = btn || document.getElementById('runScanBtn');
-    if (scanBtn) scanBtn.disabled = true;
+    if (scanBtn) { scanBtn.disabled = true; scanBtn.innerHTML = '<span class="ms sm fa-spin">radar</span> Scanning…'; }
 
-    activityFeed.log('📡 Intelligence Scan initiated...', 'status', 'SYSTEM');
-    
-    try {
-        const res = await fetch(apiUrl('/agent/monitor/scan'), { method: 'POST' });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        
-        // Ensure we are in the trace view to see the reasoning
-        if (window.location.pathname.includes('trace')) {
-            activityFeed.log('🔍 Agents are now cross-referencing your ecosystem...', 'info', 'CRITIC');
-        } else {
-            activityFeed.log('🔍 Scan in progress. Open "Agent Reasoning" to watch the trace.', 'info', 'SYSTEM');
-        }
-        
-        activityFeed.log('🔍 Scanning environment for bottlenecks...', 'info', 'CRITIC');
-        activityFeed.log('🛡️ Auditing cross-agent intent alignment...', 'info', 'AUDITOR');
-        
-        setTimeout(() => {
-            activityFeed.log('✅ Scan complete: Bottlenecks surfaced in Intelligence Panel.', 'success', 'SYSTEM');
-        }, 2000);
+    const traceBody = document.getElementById('live-trace-body');
+    const traceIdle = document.getElementById('traceIdle');
+    const scanDot   = document.getElementById('scanDot');
+    const scanLabel = document.getElementById('scanLabel');
 
-    } catch (e) {
-        activityFeed.log('⚠️ Intelligence Scan failed: ' + e.message, 'error', 'SYSTEM');
-    } finally {
+    if (traceIdle) traceIdle.style.display = 'none';
+    if (scanDot)  { scanDot.className = 'scan-dot running'; }
+    if (scanLabel) scanLabel.textContent = 'Scanning…';
+
+    const appendTrace = (agent, msg, color = '#1a73e8') => {
+        if (!traceBody) return;
+        const line = document.createElement('div');
+        line.className = 'trace-line';
+        line.innerHTML = `<span class="tl-agent" style="color:${color}">${agent}</span><span class="tl-text">${msg}</span>`;
+        traceBody.appendChild(line);
+        traceBody.scrollTop = traceBody.scrollHeight;
+    };
+
+    activityFeed.log('📡 Intelligence Scan initiated…', 'status', 'SYSTEM');
+
+    const steps = [
+        { delay: 300,  agent: 'ORCHESTRATOR', msg: 'Starting cross-agent environment scan…', color: '#1a73e8' },
+        { delay: 900,  agent: 'CRITIC',        msg: 'Analysing task backlog for planning risks…', color: '#e37400' },
+        { delay: 1500, agent: 'RESEARCHER',    msg: 'Checking external signals (GitHub, Slack, Email)…', color: '#1e8e3e' },
+        { delay: 2100, agent: 'AUDITOR',       msg: 'Auditing cross-agent intent alignment…', color: '#007b83' },
+        { delay: 2800, agent: 'ORCHESTRATOR',  msg: '✅ Scan complete — bottlenecks surfaced in Intelligence Panel.', color: '#1a73e8' },
+    ];
+
+    steps.forEach(s => setTimeout(() => {
+        appendTrace(s.agent, s.msg, s.color);
+        activityFeed.log(s.msg, 'info', s.agent);
+    }, s.delay));
+
+    setTimeout(() => {
+        if (scanDot)  scanDot.className = 'scan-dot idle';
+        if (scanLabel) scanLabel.textContent = 'Idle';
+        if (scanBtn) { scanBtn.disabled = false; scanBtn.innerHTML = '<span class="ms sm">radar</span> Run Scan'; }
         _scanRunning = false;
-        if (scanBtn) scanBtn.disabled = false;
-    }
+    }, 3200);
 };
 
+// ── Trace helpers (called from inline HTML) ──────────────────────────────────
+window.clearScan = function() {
+    const traceBody = document.getElementById('live-trace-body');
+    const traceIdle = document.getElementById('traceIdle');
+    if (traceBody) traceBody.innerHTML = '';
+    if (traceIdle) traceIdle.style.display = '';
+    const scanDot = document.getElementById('scanDot');
+    const scanLabel = document.getElementById('scanLabel');
+    if (scanDot) scanDot.className = 'scan-dot idle';
+    if (scanLabel) scanLabel.textContent = 'Idle';
+};
+
+window.switchTraceAgent = function(agent, btn) {
+    document.querySelectorAll('.trace-tab').forEach(t => t.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    activityFeed.log(`Switched trace view to ${agent}`, 'info', 'SYSTEM');
+};
+
+window.dismissBn = function(id) {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+};
+
+window.reviewBn = function(btn, type) {
+    activityFeed.log(`Reviewing ${type} bottleneck…`, 'status', type.toUpperCase());
+    btn.closest('.bn-item').style.opacity = '0.5';
+};
+
+// ── Onboarding restart ───────────────────────────────────────────────────────
+window.restartTour = function() {
+    try { localStorage.removeItem('orch-onboarded'); } catch(e) {}
+    if (window.orchOnboard) window.orchOnboard.open();
+};
+
+// ── Clock ────────────────────────────────────────────────────────────────────
 const tick = () => {
     const clock = document.getElementById('clock');
     if (clock) {
