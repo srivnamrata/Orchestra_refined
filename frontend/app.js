@@ -113,6 +113,11 @@ const activityFeed = {
 
         let contentHtml = `<div class="f-text">${message}</div>`;
         
+        // Handle Provenance (Trust/Transparency)
+        if (widget && widget.sources) {
+            contentHtml += this.renderProvenance(widget.sources);
+        }
+
         // Handle Generative UI Widgets
         if (widget) {
             contentHtml += `<div class="f-widget">${this.renderWidget(widget)}</div>`;
@@ -165,6 +170,37 @@ const activityFeed = {
             `;
         }
         return `<div class="gen-widget">Unknown widget type: ${w.type}</div>`;
+    },
+
+    renderProvenance: function(sources) {
+        if (!sources || sources.length === 0) return '';
+        
+        const typeMap = {
+            'slack': { icon: 'forum', color: '#611f69', label: 'Slack' },
+            'github': { icon: 'code', color: '#24292e', label: 'GitHub' },
+            'doc': { icon: 'description', color: 'var(--g-blue)', label: 'Doc' },
+            'metric': { icon: 'analytics', color: 'var(--g-green)', label: 'Metric' }
+        };
+
+        const sourceItems = sources.map(s => {
+            const t = typeMap[s.type] || typeMap.doc;
+            return `
+                <div class="prov-source">
+                    <div class="prov-source-icon" style="background:${t.color}">${t.label.charAt(0)}</div>
+                    <div class="ps-text"><strong>${t.label}</strong>: ${s.detail}</div>
+                </div>
+            `;
+        }).join('');
+
+        return `
+            <div class="prov-container">
+                <div class="prov-chip"><span class="ms">verified_user</span></div>
+                <div class="prov-tooltip">
+                    <div class="prov-tooltip-title">Data Provenance</div>
+                    ${sourceItems}
+                </div>
+            </div>
+        `;
     }
 };
 
@@ -185,6 +221,21 @@ window.submitGoal = async function() {
                 { name: 'Core Engine V2', status: 'Live', pct: 90, color: 'var(--g-green)' },
                 { name: 'Frontend Refactor', status: 'In Review', pct: 65, color: 'var(--g-blue)' },
                 { name: 'API Security Audit', status: 'Pending', pct: 15, color: 'var(--g-amber)' }
+            ]
+        });
+        textarea.value = '';
+    }
+    
+    if (goal.toLowerCase().includes('strategy review')) {
+        activityFeed.log('I have analyzed your project strategy and detected potential alignment risks.', 'warning', 'CRITIC', {
+            type: 'action-card',
+            title: 'Strategy Audit',
+            description: 'The Q2 goal "Mobile First" lacks corresponding tasks in the UI repository.',
+            actions: ['Create Tasks', 'Dismiss'],
+            sources: [
+                { type: 'slack', detail: 'Discussion in #product regarding mobile priority' },
+                { type: 'github', detail: 'orchestra-ui repo missing mobile-layout branch' },
+                { type: 'metric', detail: 'Conversion rate on mobile is currently -12%' }
             ]
         });
         textarea.value = '';

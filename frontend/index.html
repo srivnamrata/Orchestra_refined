@@ -1140,7 +1140,84 @@ html.dark .feed-body#action-output .activity-item {
 .ah-bar-fill { height: 100%; border-radius: var(--radius-full); transition: width 1.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
 .ah-pct { font-family: var(--font-mono); font-size: 10px; color: var(--md-muted); min-width: 24px; text-align: right; }
 
-/* ── Live Reasoning Trace ── */
+/* ── Provenance & Trust Indicators ── */
+.prov-container {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+  position: relative;
+  vertical-align: middle;
+}
+.prov-chip {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--md-surface-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: help;
+  transition: all 0.2s;
+  border: 1px solid var(--md-surface-3);
+}
+.prov-chip:hover {
+  background: var(--g-blue-light);
+  border-color: var(--g-blue);
+  transform: scale(1.1);
+}
+.prov-chip .ms { font-size: 11px; color: var(--md-dim); }
+.prov-chip:hover .ms { color: var(--g-blue); }
+
+.prov-tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(0);
+  background: var(--md-surface-1);
+  border: 1px solid var(--md-surface-3);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  padding: 12px;
+  border-radius: 12px;
+  width: 200px;
+  z-index: 100;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-bottom: 8px;
+}
+.prov-chip:hover + .prov-tooltip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(-4px);
+}
+.prov-tooltip-title {
+  font-size: 10px;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--md-dim);
+  margin-bottom: 8px;
+  letter-spacing: 0.5px;
+}
+.prov-source {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.prov-source:last-child { margin-bottom: 0; }
+.prov-source-icon {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  color: white;
+  font-weight: 800;
+}
+.ps-text { font-size: 11px; color: var(--md-on-surface); line-height: 1.3; }
+
 .trace-card {
   background: var(--md-surface); border-radius: var(--radius-lg);
   border: 1px solid var(--md-surface-2); overflow: hidden;
