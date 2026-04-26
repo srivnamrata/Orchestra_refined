@@ -1266,24 +1266,24 @@ window.setPriority = function(btn) {
     if (sel) sel.value = map[btn.textContent.trim()] || 'medium';
 };
 
-window.runScan = function() {
+window.runScan = async function() {
     if (_scanRunning) return;
     _scanRunning = true;
     
     activityFeed.log('📡 Intelligence Scan initiated...', 'status', 'SYSTEM');
     
-    setTimeout(() => {
+    try {
+        const res = await fetch(apiUrl('/agent/monitor/scan'), { method: 'POST' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        
         activityFeed.log('🔍 Scanning environment for bottlenecks...', 'info', 'CRITIC');
-    }, 1000);
-    
-    setTimeout(() => {
         activityFeed.log('🛡️ Auditing cross-agent intent alignment...', 'info', 'AUDITOR');
-    }, 2500);
-    
-    setTimeout(() => {
-        activityFeed.log('✅ Scan complete: 1 dependency risk mitigated, efficiency +4%.', 'success', 'SYSTEM');
+        activityFeed.log('✅ Scan complete: Real-time bottlenecks surfaced in reasoning trace.', 'success', 'SYSTEM');
+    } catch (e) {
+        activityFeed.log('⚠️ Intelligence Scan failed: ' + e.message, 'error', 'SYSTEM');
+    } finally {
         _scanRunning = false;
-    }, 4500);
+    }
 };
 
 const tick = () => {
