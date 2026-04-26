@@ -71,8 +71,8 @@ If they want to add a book, intent is "add".
         if intent == "update":
             # Find the book by title (case-insensitive)
             # In a real app, we'd use fuzzy matching or a vector search
-            from backend.database import SessionLocal
-            db = SessionLocal()
+            from backend.database import get_session
+            db = get_session()
             book = db.query(Book).filter(Book.title.ilike(f"%{title}%")).first()
             db.close()
             

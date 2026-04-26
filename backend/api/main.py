@@ -9,6 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, Dict, Any, AsyncGenerator
+from contextlib import asynccontextmanager
 import logging
 from datetime import datetime
 import os
@@ -101,47 +102,110 @@ config = get_config()
 
 
 
-firestore_client = None
+# ── Global Service/Agent Instances (Lazily Initialized via Lifespan) ───────────
+llm_service       = None
+pubsub_service    = None
+knowledge_graph   = None
+critic_agent      = None
+security_auditor  = None
+orchestrator      = None
+github_service    = None
+slack_service     = None
+email_service     = None
+proactive_monitor = None
+veda_librarian    = None
+param_mitra       = None
 
-if config.USE_FIRESTORE:
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Handles startup/shutdown logic. 
+    This is the safest way to initialize resources on Cloud Run.
+    """
+    global llm_service, pubsub_service, knowledge_graph, critic_agent, security_auditor, orchestrator
+    global github_service, slack_service, email_service, proactive_monitor, veda_librarian, param_mitra
+
+    logger.info("🚀 Multi-Agent Productivity Assistant Starting (Lifespan)")
+    
+    # 1. Initialize core services
+    llm_service = create_llm_service(
+        use_mock=config.USE_MOCK_LLM,
+        project_id=config.GCP_PROJECT_ID,
+        model=config.LLM_MODEL
+    )
+    pubsub_service = create_pubsub_service(
+        use_mock=config.USE_MOCK_PUBSUB,
+        project_id=config.GCP_PROJECT_ID
+    )
+    
+    # Optional Firestore
+    firestore_client = None
+    if config.USE_FIRESTORE:
+        try:
+            from google.cloud import firestore
+            firestore_client = firestore.AsyncClient(project=config.GCP_PROJECT_ID)
+            logger.info("✅ Firestore client initialized (AsyncClient).")
+        except Exception as e:
+            logger.error(f"❌ Firestore failed: {e}")
+
+    knowledge_graph = KnowledgeGraphService(firestore_client=firestore_client)
+
+    # 2. Initialize agents
+    critic_agent      = CriticAgent(llm_service, knowledge_graph, pubsub_service)
+    security_auditor  = AuditorAgent(llm_service, knowledge_graph)
+    orchestrator      = OrchestratorAgent(llm_service, critic_agent, knowledge_graph, pubsub_service)
+    
+    github_service    = create_github_service()
+    slack_service     = create_slack_service()
+    email_service     = create_email_service()
+    
+    proactive_monitor = ProactiveMonitorAgent(
+        llm_service, critic_agent, security_auditor, knowledge_graph, pubsub_service
+    )
+    
+    # New specialized agents
+    from backend.agents.librarian_agent import LibrarianAgent
+    from backend.agents.param_mitra_agent import ParamMitraAgent
+    from backend.agents.research_agent import ResearchAgent
+    from backend.agents.scheduler_agent import SchedulerAgent
+    
+    veda_librarian    = LibrarianAgent(llm_service)
+    param_mitra       = ParamMitraAgent(llm_service)
+
+    # Register sub-agents
+    orchestrator.register_sub_agent("scheduler", SchedulerAgent(llm_service))
+    orchestrator.register_sub_agent("librarian", veda_librarian)
+    orchestrator.register_sub_agent("guru",      param_mitra)
+    orchestrator.register_sub_agent("research",  ResearchAgent(knowledge_graph))
+    
+    # Mock fallback for unregistered types
+    class MockGenericAgent:
+        async def execute(self, step, prev): return {"status": "mock_success"}
+    orchestrator.register_sub_agent("task",      MockGenericAgent())
+    orchestrator.register_sub_agent("knowledge", MockGenericAgent())
+
+    # 3. Initialize Database
     try:
-        from google.cloud import firestore
-        firestore_client = firestore.AsyncClient(project=config.GCP_PROJECT_ID)
-        logger.info("✅ Firestore client initialized (AsyncClient).")
+        from backend.database import init_db
+        init_db()
+        logger.info("✅ Database initialized successfully")
     except Exception as e:
-        logger.error(f"❌ Firestore failed to initialize: {e}")
-        firestore_client = None
-else:
-    logger.info("ℹ️ Firestore disabled in current environment.")
+        logger.warning(f"⚠️ Database initialization warning: {e}")
 
+    # 4. Start background loops
+    proactive_monitor.start()
+    logger.info("✅ Proactive Monitor Agent started in background")
+    
+    yield
+    # Shutdown logic
+    logger.info("🛑 Shutting down...")
 
-# Initialize services
-llm_service = create_llm_service(
-    use_mock=config.USE_MOCK_LLM,
-    project_id=config.GCP_PROJECT_ID,
-    model=config.LLM_MODEL
-)
-
-pubsub_service = create_pubsub_service(
-    use_mock=config.USE_MOCK_PUBSUB,
-    project_id=config.GCP_PROJECT_ID
-)
-
-
-knowledge_graph = KnowledgeGraphService(firestore_client=firestore_client)
-
-critic_agent = CriticAgent(llm_service, knowledge_graph, pubsub_service)
-security_auditor = AuditorAgent(llm_service, knowledge_graph)
-orchestrator = OrchestratorAgent(llm_service, critic_agent, knowledge_graph, pubsub_service)
-
-# Initialize integration services
-github_service = create_github_service()
-slack_service = create_slack_service()
-email_service = create_email_service()
-
-# Proactive Monitor — starts its own background scan loop on startup
-proactive_monitor = ProactiveMonitorAgent(
-    llm_service, critic_agent, security_auditor, knowledge_graph, pubsub_service
+# Initialize FastAPI with lifespan
+app = FastAPI(
+    title="Multi-Agent Productivity Assistant",
+    description="AI-powered workflow orchestration with autonomous planning and execution",
+    version="1.0.0",
+    lifespan=lifespan
 )
 
 # Register sub-agents (scheduler, task executor, etc.)
@@ -201,27 +265,10 @@ class WorkflowStatusModel(BaseModel):
 # API Endpoints
 # ============================================================================
 
-@app.on_event("startup")
-async def startup_event():
-    """Initialize on startup"""
-    logger.info("🚀 Multi-Agent Productivity Assistant Starting")
-    logger.info(f"Environment: {config.__class__.__name__}")
-    logger.info(f"Critic Agent Enabled: {config.CRITIC_AGENT_ENABLED}")
-    logger.info(f"Security Auditor: ✅ Cross-Agent Vibe-Checking ENABLED")
-    logger.info(f"Debate Engine: ✅ Multi-Agent Consensus ENABLED")
-    logger.info(f"LLM Service: {'Mock' if config.USE_MOCK_LLM else 'Vertex AI'}")
-    
-    # Initialize database
-    try:
-        from backend.database import init_db
-        init_db()
-        logger.info("✅ Database initialized successfully")
-    except Exception as e:
-        logger.warning(f"⚠️ Database initialization warning: {e}")
-
-    # Start proactive monitor background loop
-    proactive_monitor.start()
-    logger.info("✅ Proactive Monitor Agent started")
+@app.get("/health", tags=["Health"])
+async def health_check():
+    """Liveness probe for Cloud Run and Docker"""
+    return {"status": "healthy", "timestamp": datetime.now().isoformat()}
 
 
 @app.get("/api/books")

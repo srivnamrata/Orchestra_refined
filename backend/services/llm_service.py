@@ -88,7 +88,7 @@ class VertexAILLMService(LLMService):
         for model_name in models_to_try:
             try:
                 model = self._try_init_model(model_name)
-                response = model.generate_content(prompt)
+                response = await model.generate_content_async(prompt)
                 if model_name != self.model_name:
                     logger.info(f"✅ Switched to working model: {model_name}")
                     self.model_name = model_name   # remember for next call

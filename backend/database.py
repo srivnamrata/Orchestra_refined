@@ -82,9 +82,21 @@ def _build_engine():
     return eng
 
 
-engine       = _build_engine()
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base         = declarative_base()
+# ── Engine & Session Initialization ──────────────────────────────────────────
+_engine = None
+
+def get_engine():
+    global _engine
+    if _engine is None:
+        _engine = _build_engine()
+    return _engine
+
+def get_session():
+    engine = get_engine()
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    return SessionLocal()
+
+Base = declarative_base()
 
 
 # ============================================================================
@@ -187,7 +199,7 @@ class Book(Base):
 
 def init_db():
     try:
-        Base.metadata.create_all(bind=engine)
+        Base.metadata.create_all(bind=get_engine())
         logger.info("✅ Database schema ready")
     except Exception as e:
         logger.error(f"❌ init_db failed: {e}")
@@ -195,7 +207,7 @@ def init_db():
 
 
 def get_db_session():
-    db = SessionLocal()
+    db = get_session()
     try:
         yield db
     finally:
@@ -208,7 +220,7 @@ def get_db_session():
 
 def create_task_in_db(task_id, title, description=None, priority="medium",
                       due_date=None, subtasks=0, dependencies=None, source="manual"):
-    db = SessionLocal()
+    db = get_session()
     try:
         t = Task(task_id=task_id, title=title, description=description,
                  priority=priority, due_date=due_date, subtasks=subtasks,
@@ -222,7 +234,7 @@ def create_task_in_db(task_id, title, description=None, priority="medium",
 
 
 def get_all_tasks(limit=100, offset=0, status=None):
-    db = SessionLocal()
+    db = get_session()
     try:
         q = db.query(Task)
         if status:
@@ -233,7 +245,7 @@ def get_all_tasks(limit=100, offset=0, status=None):
 
 
 def get_task_by_id(task_id):
-    db = SessionLocal()
+    db = get_session()
     try:
         return db.query(Task).filter(Task.task_id == task_id).first()
     finally:
@@ -241,7 +253,7 @@ def get_task_by_id(task_id):
 
 
 def update_task(task_id, **kwargs):
-    db = SessionLocal()
+    db = get_session()
     try:
         t = db.query(Task).filter(Task.task_id == task_id).first()
         if t:
@@ -257,7 +269,7 @@ def update_task(task_id, **kwargs):
 
 
 def delete_task(task_id):
-    db = SessionLocal()
+    db = get_session()
     try:
         t = db.query(Task).filter(Task.task_id == task_id).first()
         if t: db.delete(t); db.commit(); return True
@@ -273,7 +285,7 @@ def delete_task(task_id):
 # ============================================================================
 
 def create_note_in_db(note_id, title, content, category=None, tags=None):
-    db = SessionLocal()
+    db = get_session()
     try:
         n = Note(note_id=note_id, title=title, content=content,
                  category=category, tags=tags)
@@ -286,7 +298,7 @@ def create_note_in_db(note_id, title, content, category=None, tags=None):
 
 
 def get_all_notes(limit=100, offset=0, category=None):
-    db = SessionLocal()
+    db = get_session()
     try:
         q = db.query(Note).filter(Note.is_archived == False)
         if category: q = q.filter(Note.category == category)
@@ -296,7 +308,7 @@ def get_all_notes(limit=100, offset=0, category=None):
 
 
 def get_note_by_id(note_id):
-    db = SessionLocal()
+    db = get_session()
     try:
         return db.query(Note).filter(Note.note_id == note_id).first()
     finally:
@@ -304,7 +316,7 @@ def get_note_by_id(note_id):
 
 
 def update_note(note_id, **kwargs):
-    db = SessionLocal()
+    db = get_session()
     try:
         n = db.query(Note).filter(Note.note_id == note_id).first()
         if n:
@@ -320,7 +332,7 @@ def update_note(note_id, **kwargs):
 
 
 def search_notes(search_query, limit=50):
-    db = SessionLocal()
+    db = get_session()
     try:
         return db.query(Note).filter(
             (Note.title.ilike(f"%{search_query}%") |
@@ -338,7 +350,7 @@ def search_notes(search_query, limit=50):
 def create_event_in_db(event_id, title, start_time, end_time,
                        location=None, duration_minutes=60,
                        attendees=None, description=None, source="manual"):
-    db = SessionLocal()
+    db = get_session()
     try:
         e = CalendarEvent(event_id=event_id, title=title,
                           start_time=start_time, end_time=end_time,
@@ -353,7 +365,7 @@ def create_event_in_db(event_id, title, start_time, end_time,
 
 
 def get_all_events(limit=100, offset=0, upcoming_only=False):
-    db = SessionLocal()
+    db = get_session()
     try:
         q = db.query(CalendarEvent)
         if upcoming_only:
@@ -364,7 +376,7 @@ def get_all_events(limit=100, offset=0, upcoming_only=False):
 
 
 def get_event_by_id(event_id):
-    db = SessionLocal()
+    db = get_session()
     try:
         return db.query(CalendarEvent).filter(CalendarEvent.event_id == event_id).first()
     finally:
@@ -373,7 +385,7 @@ def get_event_by_id(event_id):
 
 def get_upcoming_events(days_ahead=7):
     from datetime import timedelta
-    db = SessionLocal()
+    db = get_session()
     try:
         now = datetime.utcnow()
         return db.query(CalendarEvent).filter(
@@ -385,7 +397,7 @@ def get_upcoming_events(days_ahead=7):
 
 
 def update_event(event_id, **kwargs):
-    db = SessionLocal()
+    db = get_session()
     try:
         ev = db.query(CalendarEvent).filter(CalendarEvent.event_id == event_id).first()
         if ev:
@@ -407,7 +419,7 @@ def update_event(event_id, **kwargs):
 def save_workflow_history(workflow_id, goal, priority="medium", steps_count=0,
                           tasks_created=0, events_created=0, source="text",
                           status="completed", error=None):
-    db = SessionLocal()
+    db = get_session()
     try:
         wf = WorkflowHistory(
             workflow_id=workflow_id, goal=goal, priority=priority,
@@ -425,7 +437,7 @@ def save_workflow_history(workflow_id, goal, priority="medium", steps_count=0,
 
 
 def get_workflow_history(limit=50):
-    db = SessionLocal()
+    db = get_session()
     try:
         return db.query(WorkflowHistory)\
                  .order_by(WorkflowHistory.created_at.desc())\
@@ -439,7 +451,7 @@ def get_workflow_history(limit=50):
 # ============================================================================
 
 def create_book_in_db(book_id, title, author=None, status="to-read", total_pages=1):
-    db = SessionLocal()
+    db = get_session()
     try:
         b = Book(book_id=book_id, title=title, author=author, status=status, total_pages=total_pages)
         db.add(b); db.commit(); db.refresh(b)
@@ -451,7 +463,7 @@ def create_book_in_db(book_id, title, author=None, status="to-read", total_pages
 
 
 def get_all_books(limit=100, status=None):
-    db = SessionLocal()
+    db = get_session()
     try:
         q = db.query(Book)
         if status: q = q.filter(Book.status == status)
@@ -461,7 +473,7 @@ def get_all_books(limit=100, status=None):
 
 
 def update_book_progress(book_id, current_page, status=None):
-    db = SessionLocal()
+    db = get_session()
     try:
         b = db.query(Book).filter(Book.book_id == book_id).first()
         if b:
