@@ -662,6 +662,15 @@ function initUI() {
 
     window.switchView('dashboard');
     activityFeed.log('System ready. Orchestra MD3.', 'status');
+
+    // Initialize Agent Health Bars
+    setTimeout(() => {
+        const healthData = { ah1: '72%', ah2: '55%', ah3: '88%', ah4: '40%' };
+        Object.keys(healthData).forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.width = healthData[id];
+        });
+    }, 800);
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
