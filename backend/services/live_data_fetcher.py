@@ -33,7 +33,7 @@ class LiveDataFetcher:
 
     async def fetch_live_news(
         self,
-        query: str = "artificial intelligence",
+        query: str = "AI agents LLM software engineering",
         max_articles: int = 10,
         language: str = "en"
     ) -> Dict[str, Any]:

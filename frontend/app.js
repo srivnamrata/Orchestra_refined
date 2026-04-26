@@ -1266,23 +1266,38 @@ window.setPriority = function(btn) {
     if (sel) sel.value = map[btn.textContent.trim()] || 'medium';
 };
 
-window.runScan = async function() {
+window.runScan = async function(btn) {
     if (_scanRunning) return;
     _scanRunning = true;
     
+    const scanBtn = btn || document.getElementById('runScanBtn');
+    if (scanBtn) scanBtn.disabled = true;
+
     activityFeed.log('📡 Intelligence Scan initiated...', 'status', 'SYSTEM');
     
     try {
         const res = await fetch(apiUrl('/agent/monitor/scan'), { method: 'POST' });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         
+        // Ensure we are in the trace view to see the reasoning
+        if (window.location.pathname.includes('trace')) {
+            activityFeed.log('🔍 Agents are now cross-referencing your ecosystem...', 'info', 'CRITIC');
+        } else {
+            activityFeed.log('🔍 Scan in progress. Open "Agent Reasoning" to watch the trace.', 'info', 'SYSTEM');
+        }
+        
         activityFeed.log('🔍 Scanning environment for bottlenecks...', 'info', 'CRITIC');
         activityFeed.log('🛡️ Auditing cross-agent intent alignment...', 'info', 'AUDITOR');
-        activityFeed.log('✅ Scan complete: Real-time bottlenecks surfaced in reasoning trace.', 'success', 'SYSTEM');
+        
+        setTimeout(() => {
+            activityFeed.log('✅ Scan complete: Bottlenecks surfaced in Intelligence Panel.', 'success', 'SYSTEM');
+        }, 2000);
+
     } catch (e) {
         activityFeed.log('⚠️ Intelligence Scan failed: ' + e.message, 'error', 'SYSTEM');
     } finally {
         _scanRunning = false;
+        if (scanBtn) scanBtn.disabled = false;
     }
 };
 
