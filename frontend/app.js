@@ -63,9 +63,9 @@ window.switchView = function(viewId) {
     }
 };
 
-// ── Activity Feed & Logging ──────────────────────────────────────────────────
+// ── Activity Feed & Logging (Generative UI Support) ──────────────────────────
 const activityFeed = {
-    log: function(message, type = 'info', agent = 'SYSTEM') {
+    log: function(message, type = 'info', agent = 'SYSTEM', widget = null) {
         const feed = document.getElementById('feed');
         if (!feed) return;
 
@@ -83,6 +83,13 @@ const activityFeed = {
         };
         const c = colors[type] || colors.info;
 
+        let contentHtml = `<div class="f-text">${message}</div>`;
+        
+        // Handle Generative UI Widgets
+        if (widget) {
+            contentHtml += `<div class="f-widget">${this.renderWidget(widget)}</div>`;
+        }
+
         entryWrapper.innerHTML = `
             <div class="feed-entry stream-new">
                 <div class="f-time">${timestamp}</div>
@@ -90,13 +97,46 @@ const activityFeed = {
                     <div class="f-agent" style="color:${c.main};background:${c.bg};border:1px solid ${c.main}33">
                         ${agent.toUpperCase()}
                     </div>
-                    <div class="f-text">${message}</div>
+                    ${contentHtml}
                 </div>
                 <div class="f-explain-icon">🧠</div>
             </div>
         `;
         feed.prepend(entryWrapper);
         while (feed.children.length > 50) feed.removeChild(feed.lastElementChild);
+    },
+
+    renderWidget: function(w) {
+        if (w.type === 'progress-table') {
+            return `
+                <div class="gen-widget table-widget">
+                    <table>
+                        <thead><tr><th>Project</th><th>Status</th><th>Health</th></tr></thead>
+                        <tbody>
+                            ${(w.data || []).map(r => `
+                                <tr>
+                                    <td>${r.name}</td>
+                                    <td><span class="chip" style="background:${r.color}22; color:${r.color}">${r.status}</span></td>
+                                    <td><div style="width:100%; height:4px; background:var(--md-surface-3); border-radius:4px"><div style="width:${r.pct}%; height:100%; background:${r.color}; border-radius:4px"></div></div></td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+        if (w.type === 'action-card') {
+            return `
+                <div class="gen-widget card-widget" style="border-left:4px solid var(--g-blue)">
+                    <div style="font-weight:700; margin-bottom:8px">${w.title}</div>
+                    <div style="font-size:12px; color:var(--md-dim); margin-bottom:12px">${w.description}</div>
+                    <div style="display:flex; gap:8px">
+                        ${(w.actions || []).map(a => `<button class="na-btn primary" onclick="activityFeed.log('Triggered: ${a}','success','WIDGET')">${a}</button>`).join('')}
+                    </div>
+                </div>
+            `;
+        }
+        return `<div class="gen-widget">Unknown widget type: ${w.type}</div>`;
     }
 };
 
@@ -108,6 +148,20 @@ window.submitGoal = async function() {
     const goal = (textarea.value || '').trim();
 
     if (!goal) return;
+
+    // GENERATIVE UI DEMO TRIGGER
+    if (goal.toLowerCase().includes('project status')) {
+        activityFeed.log('I have analyzed your active projects and generated this status overview.', 'status', 'ORCHESTRATOR', {
+            type: 'progress-table',
+            data: [
+                { name: 'Core Engine V2', status: 'Live', pct: 90, color: 'var(--g-green)' },
+                { name: 'Frontend Refactor', status: 'In Review', pct: 65, color: 'var(--g-blue)' },
+                { name: 'API Security Audit', status: 'Pending', pct: 15, color: 'var(--g-amber)' }
+            ]
+        });
+        textarea.value = '';
+        return;
+    }
 
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<span class="ms sm fa-spin">progress_activity</span> Running…';
@@ -174,7 +228,7 @@ window.submitGoal = async function() {
                 try {
                     const payload = JSON.parse(data);
                     if (event === 'activity') {
-                        activityFeed.log(payload.message, payload.type || 'info', payload.category || 'agent');
+                        activityFeed.log(payload.message, payload.type || 'info', payload.category || 'agent', payload.widget);
                     } else if (event === 'done') {
                         activityFeed.log('✅ Workflow execution completed.', 'success', 'SYSTEM');
                     }
@@ -197,7 +251,6 @@ window.submitGoal = async function() {
 // ── Intelligence Demo Logic ─────────────────────────────────────────────────
 window.runDemo = async function(type) {
     if (!type) {
-        // Handle global refresh from bottom button
         window.runDemo('news');
         window.runDemo('research');
         window.runDemo('tasks');
