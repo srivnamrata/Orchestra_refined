@@ -236,6 +236,43 @@ const activityFeed = {
                     </div>
                 </div>
             `;
+        if (w.type === 'guru-audit') {
+            return `
+                <div class="guru-card anim a1">
+                    <div class="guru-msg">"${w.message}"</div>
+                    <div class="audit-grid" style="display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:24px">
+                        <div class="audit-item" style="text-align:center">
+                            <div class="p-meter" style="height:80px; width:8px; background:var(--md-surface-3); border-radius:10px; margin:0 auto 12px; position:relative; overflow:hidden">
+                                <div class="p-fill" style="position:absolute; bottom:0; width:100%; background:var(--g-amber); border-radius:10px; height:${w.scores.code}%"></div>
+                            </div>
+                            <div class="p-val" style="font-weight:800; font-size:14px">${w.scores.code}%</div>
+                            <div class="p-label" style="font-size:10px; font-weight:800; color:var(--md-dim)">CODE</div>
+                        </div>
+                        <div class="audit-item" style="text-align:center">
+                            <div class="p-meter" style="height:80px; width:8px; background:var(--md-surface-3); border-radius:10px; margin:0 auto 12px; position:relative; overflow:hidden">
+                                <div class="p-fill" style="position:absolute; bottom:0; width:100%; background:var(--g-amber); border-radius:10px; height:${w.scores.comm}%"></div>
+                            </div>
+                            <div class="p-val" style="font-weight:800; font-size:14px">${w.scores.comm}%</div>
+                            <div class="p-label" style="font-size:10px; font-weight:800; color:var(--md-dim)">COMM</div>
+                        </div>
+                        <div class="audit-item" style="text-align:center">
+                            <div class="p-meter" style="height:80px; width:8px; background:var(--md-surface-3); border-radius:10px; margin:0 auto 12px; position:relative; overflow:hidden">
+                                <div class="p-fill" style="position:absolute; bottom:0; width:100%; background:var(--g-amber); border-radius:10px; height:${w.scores.eff}%"></div>
+                            </div>
+                            <div class="p-val" style="font-weight:800; font-size:14px">${w.scores.eff}%</div>
+                            <div class="p-label" style="font-size:10px; font-weight:800; color:var(--md-dim)">EFFICIENCY</div>
+                        </div>
+                    </div>
+                    <div style="font-weight:700; font-size:12px; margin-bottom:12px; text-transform:uppercase; color:var(--md-dim)">The Blunt Truth</div>
+                    <ul class="blunt-list" style="background:rgba(0,0,0,0.2); border-radius:12px; padding:16px; list-style:none">
+                        ${w.bottlenecks.map(b => `<li style="font-size:12px; margin-bottom:10px; color:var(--md-on-surface); display:flex; gap:8px"><span class="ms" style="color:var(--g-amber); font-size:14px">error_outline</span> ${b}</li>`).join('')}
+                    </ul>
+                    <div style="margin-top:20px; padding:16px; background:var(--g-amber-light); border-radius:12px; border:1px solid var(--g-amber)">
+                        <div style="font-weight:800; font-size:10px; color:var(--g-amber); text-transform:uppercase; margin-bottom:4px">Potential Unlock</div>
+                        <div style="font-size:13px; font-weight:700; color:var(--md-on-surface)">${w.unlock}</div>
+                    </div>
+                </div>
+            `;
         }
     },
 
@@ -327,6 +364,22 @@ window.submitGoal = async function() {
         return;
     }
 
+    if (goal.toLowerCase().includes('veda') || goal.toLowerCase().includes('bookkeeping')) {
+        activityFeed.log('Veda is processing your book update...', 'status', 'VEDA');
+        setTimeout(() => {
+            activityFeed.log('Veda has updated your knowledge stack.', 'success', 'VEDA', {
+                type: 'action-card',
+                title: 'Veda Confirmation',
+                description: 'Updated "Autobiography of a Yogi" to page 369. Current Progress: 82%.',
+                actions: ['View Library']
+            });
+            if (typeof window.fetchBooks === 'function') window.fetchBooks();
+        }, 1500);
+        textarea.value = '';
+        return;
+    }
+
+    if (goal.toLowerCase().includes('deploy to prod')) {
         activityFeed.log('Detected high-stakes action. Triggering Multi-Agent Debate Engine...', 'warning', 'SYSTEM');
         setTimeout(() => {
             activityFeed.log('Conflict detected between Speed and Security agents. Resolving via Consensus Protocol.', 'status', 'ORCHESTRATOR', {
@@ -340,6 +393,29 @@ window.submitGoal = async function() {
                 ]
             });
         }, 1500);
+        textarea.value = '';
+    }
+    if (goal.toLowerCase().includes('param mitra') || goal.toLowerCase().includes('life audit')) {
+        activityFeed.log('Param Mitra is searching your soul (and your git commits)...', 'status', 'PARAM_MITRA');
+        setTimeout(() => {
+            const audit = {
+                type: 'guru-audit',
+                message: 'Your path is clear, but your execution is clouded by hesitation. You are building for today, but your potential demands you build for the decade.',
+                scores: { code: 72, comm: 88, eff: 54 },
+                bottlenecks: [
+                    "Git logs show functional code, but you're avoiding the complex refactor of the auth layer.",
+                    "Email replies are professionally sound but lack the empathy needed for lead-dev influence.",
+                    "Efficiency is low—you are clearing tasks, but they are the easy ones. The big goals remain stagnant."
+                ],
+                unlock: "Stop checking emails and dedicate the next 2 hours to the Security Refactor."
+            };
+            activityFeed.log('Param Mitra has completed your Life Audit.', 'success', 'PARAM_MITRA', audit);
+            const container = document.getElementById('guru-audit-container');
+            if (container) {
+                container.innerHTML = activityFeed.renderWidget(audit);
+                window.switchView('guru');
+            }
+        }, 2000);
         textarea.value = '';
         return;
     }

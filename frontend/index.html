@@ -1451,6 +1451,42 @@ html.dark .feed-body#action-output .activity-item {
   background: var(--md-surface-2);
 }
 
+/* ── Param Mitra (Guru UI) ── */
+.guru-card {
+  background: linear-gradient(135deg, var(--md-surface-1), var(--md-surface-2));
+  border-radius: 24px;
+  padding: 24px;
+  border: 1px solid var(--md-surface-3);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+.guru-msg { font-style: italic; font-size: 14px; color: var(--md-on-surface); line-height: 1.6; margin-bottom: 24px; }
+.audit-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+.audit-item { text-align: center; }
+.p-meter {
+  height: 80px;
+  width: 8px;
+  background: var(--md-surface-3);
+  border-radius: 10px;
+  margin: 0 auto 12px;
+  position: relative;
+  overflow: hidden;
+}
+.p-fill {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  background: var(--g-amber);
+  border-radius: 10px;
+  transition: height 1.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.p-label { font-size: 10px; font-weight: 800; text-transform: uppercase; color: var(--md-dim); }
+.p-val { font-weight: 800; font-size: 14px; margin-bottom: 4px; }
+.blunt-list { background: rgba(0,0,0,0.2); border-radius: 12px; padding: 16px; list-style: none; }
+.blunt-list li { font-size: 12px; margin-bottom: 10px; display: flex; gap: 8px; color: var(--md-on-surface); }
+.blunt-list li:last-child { margin-bottom: 0; }
+.blunt-list .ms { color: var(--g-amber); font-size: 14px; }
+
+
 
 
 
@@ -2032,7 +2068,8 @@ html.dark .completion-toast { box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1p
     <div class="nav-item" onclick="window.switchView('slack')"><span class="ms">forum</span> Slack <span class="nav-badge nb-blue">stub</span></div>
     <div class="nav-item" onclick="window.switchView('email')"><span class="ms">mail</span> Email <span class="nav-badge nb-blue">stub</span></div>
     <div class="nav-item" onclick="window.switchView('discovery')"><span class="ms">dynamic_form</span> Discovery Lab <span class="nav-badge nb-violet">MCP</span></div>
-    <div class="nav-item" onclick="window.switchView('library')"><span class="ms">library_books</span> Library <span class="nav-badge nb-blue">Alexandria</span></div>
+    <div class="nav-item" onclick="window.switchView('library')"><span class="ms">library_books</span> Library <span class="nav-badge nb-violet">Veda</span></div>
+    <div class="nav-item" onclick="window.switchView('guru')"><span class="ms">self_improvement</span> Param Mitra <span class="nav-badge nb-amber">GURU</span></div>
   </nav>
 
   <!-- Quick Actions -->
@@ -2372,13 +2409,31 @@ html.dark .completion-toast { box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1p
       <div class="library-container" style="padding:24px">
         <div class="view-header" style="margin-bottom:32px; display:flex; justify-content:space-between; align-items:center">
           <div>
-            <h2 style="color:var(--md-on-surface)">Alexandria Library</h2>
-            <p style="color:var(--md-dim)">Tracking your reading progress and personal knowledge base.</p>
+            <h2 style="color:var(--md-on-surface)">Veda Library</h2>
+            <p style="color:var(--md-dim)">Deep learning from your personal knowledge stack.</p>
           </div>
-          <button class="goal-run" onclick="activityFeed.log('Manual book entry not yet available. Use Alexandria chat.','info','SYSTEM')"><span class="ms sm">add</span> Add Book</button>
+          <button class="goal-run" onclick="activityFeed.log('Manual entry locked. Use Veda chat.','info','SYSTEM')"><span class="ms sm">add</span> Add Book</button>
         </div>
         <div id="bookshelf" class="books-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:24px">
            <!-- Populated by app.js -->
+        </div>
+      </div>
+    </div>
+
+    <div id="guru" class="view">
+      <div class="guru-container" style="padding:40px; max-width: 800px; margin: 0 auto;">
+        <div style="text-align:center; margin-bottom:48px">
+          <div class="ms" style="font-size:64px; color:var(--g-amber); margin-bottom:16px">self_improvement</div>
+          <h2 style="color:var(--md-on-surface); font-size:32px">The path of Param Mitra</h2>
+          <p style="color:var(--md-dim)">Observe your work. Elevate your potential. Find the blunt truth.</p>
+        </div>
+        
+        <div id="guru-audit-container">
+           <!-- Populated by app.js -->
+           <div class="empty-state" style="padding:40px; text-align:center; background:var(--md-surface-1); border-radius:24px">
+              <p style="color:var(--md-dim)">I am observing your journey... Ask me for a "Life Audit" to begin.</p>
+              <button class="goal-run" style="margin-top:20px" onclick="useSuggestion('Param Mitra, give me a blunt Life Audit.')">Begin Audit</button>
+           </div>
         </div>
       </div>
     </div>
