@@ -226,6 +226,14 @@ async def serve_dashboard():
         return FileResponse(index_path)
     return {"message": "Dashboard not found. Ensure frontend folder exists."}
 
+@app.get("/trace", include_in_schema=False)
+async def serve_trace():
+    """Serve the Thought Trace Dashboard"""
+    trace_path = os.path.join(FRONTEND_DIR, "trace.html")
+    if os.path.exists(trace_path):
+        return FileResponse(trace_path)
+    return {"message": "Trace dashboard not found. Ensure frontend folder exists."}
+
 
 @app.get("/api/info", tags=["Health"])
 async def root_info():

@@ -2118,11 +2118,6 @@ async function triggerVibeCheckDemo() {
     }
 }
 
-async function triggerDebateDemo() {
-        appendLog('Debate engine failed to initiate (or endpoint not fully mockable without LLM keys). ' + e.message, 'error');
-        debateBox.innerHTML = `<div class="log-error">Error: ${e.message}</div>`;
-    }
-}
 
 async function triggerNewsDemo() {
     appendLog('📰 Fetching live tech & AI headlines…', 'info');
