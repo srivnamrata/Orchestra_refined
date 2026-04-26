@@ -59,9 +59,24 @@ window.switchView = function(viewId) {
     const viewEl = document.getElementById(viewId) || document.getElementById('dashboard');
     if (viewEl) {
         viewEl.classList.add('active');
-        viewEl.style.display = 'block';
+        viewEl.style.display = (viewId === 'trace') ? 'block' : 'block';
+        if (viewId === 'trace') {
+            viewEl.style.height = 'calc(100vh - 64px)';
+        }
     }
 };
+
+// ── Audio Engine ─────────────────────────────────────────────────────────────
+window.playAudio = function(text) {
+    if (!text) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 1.0;
+    utterance.pitch = 1.0;
+    window.speechSynthesis.speak(utterance);
+    activityFeed.log(`🔊 Speaking: "${text.substring(0, 50)}..."`, 'status', 'AUDIO');
+};
+
 
 // ── Activity Feed & Logging (Generative UI Support) ──────────────────────────
 const activityFeed = {
@@ -250,6 +265,7 @@ window.submitGoal = async function() {
 
 // ── Intelligence Demo Logic ─────────────────────────────────────────────────
 window.runDemo = async function(type) {
+    console.log(`Running Demo: ${type || 'all'}`);
     if (!type) {
         window.runDemo('news');
         window.runDemo('research');
@@ -287,12 +303,15 @@ window.runDemo = async function(type) {
                 reasoning: 'Demo run from redesigned UI'
             }) : null
         });
-        const data = await res.json();
         
-        if (type === 'news') renderNews(data.articles);
-        else if (type === 'research') renderResearch(data.papers);
-        else if (type === 'tasks') renderTasks(data.tasks);
-        else if (type === 'schedule') renderSchedule(data.events);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        console.log(`Demo Data Received [${type}]:`, data);
+        
+        if (type === 'news') renderNews(data.articles || data.data || []);
+        else if (type === 'research') renderResearch(data.papers || data.data || []);
+        else if (type === 'tasks') renderTasks(data.tasks || []);
+        else if (type === 'schedule') renderSchedule(data.events || []);
         else if (type === 'vibe') renderVibeCheck(data);
         else if (type === 'debate') renderDebate(data);
         else if (type === 'critic') renderCriticAnalysis(data);
@@ -301,6 +320,7 @@ window.runDemo = async function(type) {
             activityFeed.log(msg, 'info', cfg.name);
         }
     } catch (err) {
+        console.error(`Demo Error [${type}]:`, err);
         activityFeed.log(`⚠️ Sequence failed: ${err.message}`, 'warning', cfg.name);
     }
 };
@@ -412,15 +432,23 @@ function renderNews(articles) {
     const pane = document.getElementById('pane-news');
     if (!pane) return;
     const grid = pane.querySelector('.news-grid');
-    if (grid) grid.innerHTML = (articles || []).map(a => {
+    if (!grid) return;
+    
+    if (!articles || articles.length === 0) {
+        grid.innerHTML = '<div class="empty-state">No news available at the moment.</div>';
+        return;
+    }
+
+    grid.innerHTML = (articles || []).map(a => {
         const sourceName = (typeof a.source === 'object' && a.source !== null) ? (a.source.name || 'News') : (a.source || 'News');
+        const cleanTitle = (a.title || '').replace(/'/g, "\\'");
         return `
             <div class="news-card">
                 <div class="news-source-row"><div class="news-favicon" style="background:var(--g-amber);color:white">${sourceName.charAt(0)}</div><span class="news-source-name">${sourceName}</span></div>
                 <div class="news-title">${a.title}</div>
                 <div class="news-actions">
                     <button class="na-btn" onclick="window.open('${a.url}','_blank')">📖 Read</button>
-                    <button class="na-btn" onclick="activityFeed.log('Audio Summary starting for: ${a.title.replace(/'/g, "\\'")}','status','AUDITOR')">🎧 Listen</button>
+                    <button class="na-btn" onclick="window.playAudio('${cleanTitle}')">🎧 Listen</button>
                     <button class="na-btn" onclick="activityFeed.log('Article saved to Knowledge Graph','success','KNOWLEDGE')">🔖 Save</button>
                 </div>
             </div>
@@ -432,17 +460,27 @@ function renderResearch(papers) {
     const pane = document.getElementById('pane-research');
     if (!pane) return;
     const grid = pane.querySelector('.news-grid');
-    if (grid) grid.innerHTML = (papers || []).map(p => `
-        <div class="news-card nc-arxiv">
-            <div class="news-source-row"><div class="news-favicon" style="background:var(--g-blue);color:white">R</div><span class="news-source-name">arXiv</span></div>
-            <div class="news-title">${p.title}</div>
-            <div class="news-actions">
-                <button class="na-btn" onclick="window.open('${p.url}','_blank')">📖 View</button>
-                <button class="na-btn" onclick="activityFeed.log('Generating audio summary for research paper…','status','AUDITOR')">🎧 Listen</button>
-                <button class="na-btn" onclick="activityFeed.log('Paper indexed in Knowledge Graph','success','KNOWLEDGE')">🔖 Save</button>
+    if (!grid) return;
+
+    if (!papers || papers.length === 0) {
+        grid.innerHTML = '<div class="empty-state">No research papers found.</div>';
+        return;
+    }
+
+    grid.innerHTML = (papers || []).map(p => {
+        const cleanTitle = (p.title || '').replace(/'/g, "\\'");
+        return `
+            <div class="news-card nc-arxiv">
+                <div class="news-source-row"><div class="news-favicon" style="background:var(--g-blue);color:white">R</div><span class="news-source-name">arXiv</span></div>
+                <div class="news-title">${p.title}</div>
+                <div class="news-actions">
+                    <button class="na-btn" onclick="window.open('${p.url}','_blank')">📖 View</button>
+                    <button class="na-btn" onclick="window.playAudio('${cleanTitle}')">🎧 Listen</button>
+                    <button class="na-btn" onclick="activityFeed.log('Paper indexed in Knowledge Graph','success','KNOWLEDGE')">🔖 Save</button>
+                </div>
             </div>
-        </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 function renderTasks(tasks) {
