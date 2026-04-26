@@ -597,29 +597,62 @@ const activityFeed = {
         div.className = `activity-item type-${activity.type}`;
         div.id = `activity-${activity.id}`;
         div.dataset.filter = activity.category;
-        
+
         if (this.currentFilter !== 'all' && activity.category !== this.currentFilter) {
             div.classList.add('hidden');
         }
-        
-        const badgeText = activity.type.toUpperCase();
-        const badgeClass = `badge-${activity.type}`;
-        
+
+        // Detect agent name from message for pill colour
+        const msg = activity.message || '';
+        let agentName = null;
+        let cleanMsg  = msg;
+        const agentMatch = msg.match(/^\s*<span[^>]*>\[([^\]]+)\]<\/span>\s*(.*)/s)
+                        || msg.match(/^\[([A-Za-z ]+(?:Agent)?)\]\s*(.*)/s);
+        if (agentMatch) {
+            agentName = agentMatch[1].trim();
+            cleanMsg  = agentMatch[2] || msg;
+        }
+
+        // Agent pill colours (matching Thought Trace)
+        const agentPillMap = {
+            'Orchestrator':   'rgba(79,172,254,0.2)|#4facfe',
+            'Critic Agent':   'rgba(239,68,68,0.2)|#f87171',
+            'Critic':         'rgba(239,68,68,0.2)|#f87171',
+            'Auditor':        'rgba(16,185,129,0.2)|#34d399',
+            'Task Agent':     'rgba(245,158,11,0.2)|#fbbf24',
+            'Scheduler Agent':'rgba(167,139,250,0.2)|#a78bfa',
+            'Research Agent': 'rgba(236,72,153,0.2)|#f472b6',
+            'News Agent':     'rgba(99,102,241,0.2)|#818cf8',
+            'Knowledge Agent':'rgba(20,184,166,0.2)|#2dd4bf',
+        };
+        const [bg, color] = agentName && agentPillMap[agentName]
+            ? agentPillMap[agentName].split('|')
+            : ['rgba(255,255,255,0.08)', '#aaa'];
+
+        const agentPillHTML = agentName
+            ? `<span style="display:inline-flex;align-items:center;padding:1px 8px;border-radius:4px;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;background:${bg};color:${color};margin-right:6px;flex-shrink:0;">${agentName}</span>`
+            : '';
+
+        const ts = activity.timestamp || '';
+
         div.innerHTML = `
-            <div style="display: flex; gap: 8px; width: 100%;">
-                <div class="activity-content" style="flex: 1;">
-                    <div class="activity-badge ${badgeClass}">${badgeText}</div>
-                    <div class="activity-message">${activity.message}</div>
-                    <div class="activity-timestamp">${activity.timestamp}</div>
+            <div style="display:flex;gap:0;width:100%;align-items:flex-start;">
+                <span style="font-size:0.68rem;color:#555;min-width:52px;padding-top:3px;flex-shrink:0;">${ts}</span>
+                <div style="flex:1;background:rgba(255,255,255,0.03);border-radius:10px;padding:8px 10px;border-left:2px solid ${color};">
+                    <div style="display:flex;align-items:flex-start;gap:4px;flex-wrap:wrap;">
+                        ${agentPillHTML}
+                        <span class="activity-message" style="font-size:0.83rem;color:#ccc;line-height:1.45;flex:1;">${cleanMsg}</span>
+                    </div>
                 </div>
-                <button class="activity-pin-btn ${activity.pinned ? 'pinned' : ''}" 
+                <button class="activity-pin-btn ${activity.pinned ? 'pinned' : ''}"
                         onclick="activityFeed.togglePin(${activity.id})"
-                        title="${activity.pinned ? 'Unpin' : 'Pin important event'}">
+                        title="${activity.pinned ? 'Unpin' : 'Pin'}"
+                        style="margin-left:6px;margin-top:4px;">
                     <i class="fa-solid fa-thumbtack"></i>
                 </button>
             </div>
         `;
-        
+
         return div;
     },
     
@@ -2959,158 +2992,188 @@ function nlOrchestratorKeydown(e) {
 // Voice Input — Web Speech API
 // ============================================================================
 
+// ── Voice Input — rebuilt for reliability ─────────────────────────────────
+
 const voiceInput = {
-    recognition: null,
-    isListening: false,
-    isSupported: false,
-    interimTranscript: '',
-    finalTranscript: '',
+    recognition:      null,
+    isListening:      false,
+    isSupported:      false,
+    permissionState:  'unknown',   // 'unknown' | 'granted' | 'denied'
+    _restartPending:  false,
 
     init() {
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (!SpeechRecognition) {
-            // Hide mic button if not supported
-            const micBtn = document.getElementById('nl-mic-btn');
-            if (micBtn) micBtn.style.display = 'none';
-            console.warn('[Voice] Web Speech API not supported in this browser');
+        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SR) {
+            console.warn('[Voice] Web Speech API not supported');
+            const btn = document.getElementById('nl-mic-btn');
+            if (btn) btn.style.display = 'none';
             return;
         }
-
         this.isSupported = true;
-        this.recognition = new SpeechRecognition();
-        this.recognition.continuous = true;       // keep listening until stopped
-        this.recognition.interimResults = true;   // show live partial results
-        this.recognition.lang = 'en-US';
-        this.recognition.maxAlternatives = 1;
+        this._buildRecognition(SR);
 
-        this.recognition.onstart = () => {
-            this.isListening = true;
-            this._setListeningUI(true);
+        // Check existing mic permission silently
+        if (navigator.permissions) {
+            navigator.permissions.query({ name: 'microphone' }).then(result => {
+                this.permissionState = result.state;
+                result.onchange = () => { this.permissionState = result.state; };
+            }).catch(() => {});
+        }
+    },
+
+    _buildRecognition(SR) {
+        const r = new SR();
+        r.continuous      = false;   // single utterance per start() — more reliable on mobile
+        r.interimResults  = true;
+        r.lang            = 'en-US';
+        r.maxAlternatives = 1;
+
+        r.onstart = () => {
+            this.isListening     = true;
+            this._restartPending = false;
+            this._setUI(true);
         };
 
-        this.recognition.onresult = (event) => {
-            this.interimTranscript = '';
-            this.finalTranscript = '';
-
+        r.onresult = (event) => {
+            let interim = '', final_ = '';
             for (let i = event.resultIndex; i < event.results.length; i++) {
                 const t = event.results[i][0].transcript;
-                if (event.results[i].isFinal) {
-                    this.finalTranscript += t;
-                } else {
-                    this.interimTranscript += t;
-                }
+                if (event.results[i].isFinal) final_ += t;
+                else interim += t;
             }
-
-            // Show live interim text in the textarea
             const ta = document.getElementById('nl-goal-input');
             if (ta) {
-                const existing = ta.dataset.voiceBase || '';
-                ta.value = existing + this.finalTranscript + this.interimTranscript;
+                ta.value = (ta.dataset.voiceBase || '') + final_ + interim;
                 ta.style.height = 'auto';
                 ta.style.height = Math.min(ta.scrollHeight, 120) + 'px';
             }
-
-            // When we have a final result, save it as the confirmed base
-            if (this.finalTranscript) {
-                const ta = document.getElementById('nl-goal-input');
-                if (ta) ta.dataset.voiceBase = (ta.dataset.voiceBase || '') + this.finalTranscript;
+            if (final_) {
+                const ta2 = document.getElementById('nl-goal-input');
+                if (ta2) ta2.dataset.voiceBase = (ta2.dataset.voiceBase || '') + final_;
             }
         };
 
-        this.recognition.onerror = (event) => {
-            console.error('[Voice] Error:', event.error);
-            const hints = {
-                'not-allowed':   '🎤 Microphone access denied — please allow microphone in your browser settings',
-                'no-speech':     '🎤 No speech detected — try again',
-                'network':       '🎤 Network error — check connection',
-                'audio-capture': '🎤 No microphone found',
-            };
-            const msg = hints[event.error] || `🎤 Voice error: ${event.error}`;
-            document.getElementById('nl-hint-text').innerHTML =
-                `<span style="color:#ef4444;">${msg}</span>`;
-            this.stop();
-        };
-
-        this.recognition.onend = () => {
-            if (this.isListening) {
-                // Auto-restart if we didn't manually stop (handles browser auto-stop after silence)
-                try { this.recognition.start(); } catch (_) { this._setListeningUI(false); }
+        r.onerror = (ev) => {
+            console.warn('[Voice] error:', ev.error);
+            if (ev.error === 'not-allowed' || ev.error === 'permission-denied') {
+                this.permissionState = 'denied';
+                this._hint('🎤 Mic blocked — click the 🔒 icon in your browser address bar and allow microphone', '#ef4444');
+            } else if (ev.error === 'no-speech') {
+                // Don't show error for no-speech — just restart if still supposed to listen
+            } else if (ev.error === 'aborted') {
+                // Intentional stop — do nothing
             } else {
-                this._setListeningUI(false);
+                this._hint(`🎤 ${ev.error} — click mic to retry`, '#f59e0b');
+            }
+            this.isListening = false;
+            this._setUI(false);
+        };
+
+        r.onend = () => {
+            // If still supposed to be listening (continuous mode via manual management)
+            if (this.isListening && !this._restartPending) {
+                this._restartPending = true;
+                setTimeout(() => {
+                    if (this.isListening) {
+                        try { this.recognition.start(); }
+                        catch (_) { this.isListening = false; this._setUI(false); }
+                    }
+                    this._restartPending = false;
+                }, 150);   // small gap prevents "already started" errors
+            } else if (!this.isListening) {
+                this._setUI(false);
             }
         };
+
+        this.recognition = r;
     },
 
-    start() {
+    async start() {
         if (!this.isSupported) return;
-        const ta = document.getElementById('nl-goal-input');
-        if (ta) {
-            // Save current text as base so voice appends to it
-            ta.dataset.voiceBase = ta.value ? ta.value.trimEnd() + ' ' : '';
+
+        // If permission was previously denied, prompt user
+        if (this.permissionState === 'denied') {
+            this._hint('🎤 Mic blocked — click the 🔒 lock icon in your address bar and allow microphone', '#ef4444');
+            return;
         }
+
+        // Save textarea text as base
+        const ta = document.getElementById('nl-goal-input');
+        if (ta) ta.dataset.voiceBase = ta.value ? ta.value.trimEnd() + ' ' : '';
+
+        this.isListening = true;
+        this._setUI(true);
+
         try {
             this.recognition.start();
         } catch (e) {
-            console.warn('[Voice] Start error:', e);
+            // "already started" — stop and restart
+            if (e.message && e.message.includes('already started')) {
+                try { this.recognition.stop(); } catch (_) {}
+                setTimeout(() => { try { this.recognition.start(); } catch (_) {} }, 200);
+            } else {
+                console.warn('[Voice] start error:', e);
+                this.isListening = false;
+                this._setUI(false);
+            }
         }
     },
 
     stop() {
-        this.isListening = false;
+        this.isListening     = false;
+        this._restartPending = false;
         try { this.recognition.stop(); } catch (_) {}
-        this._setListeningUI(false);
-
-        // Clean up the voice base tag
+        this._setUI(false);
         const ta = document.getElementById('nl-goal-input');
         if (ta) {
             delete ta.dataset.voiceBase;
-            // Trim trailing whitespace/partial
             ta.value = ta.value.trim();
+        }
+        this._hint('<i class="fa-solid fa-keyboard"></i> Ctrl+Enter to submit &nbsp;·&nbsp; <i class="fa-solid fa-microphone"></i> Click mic to speak', '');
+    },
+
+    _setUI(listening) {
+        const btn  = document.getElementById('nl-mic-btn');
+        const icon = document.getElementById('nl-mic-icon');
+        const wave = document.getElementById('nl-voice-wave');
+        if (!btn) return;
+        if (listening) {
+            btn.classList.add('listening');
+            btn.title = 'Listening — click to stop';
+            if (icon) icon.className = 'fa-solid fa-microphone-slash';
+            if (wave) wave.classList.add('active');
+            this._hint('<i class="fa-solid fa-circle" style="font-size:0.55rem;color:#ef4444;animation:micPulse 1s infinite;"></i> Listening… speak now, click mic to stop', '#ef4444');
+        } else {
+            btn.classList.remove('listening', 'processing');
+            btn.title = 'Click to speak';
+            if (icon) icon.className = 'fa-solid fa-microphone';
+            if (wave) wave.classList.remove('active');
         }
     },
 
-    _setListeningUI(listening) {
-        const micBtn   = document.getElementById('nl-mic-btn');
-        const micIcon  = document.getElementById('nl-mic-icon');
-        const wave     = document.getElementById('nl-voice-wave');
-        const hintText = document.getElementById('nl-hint-text');
-
-        if (!micBtn) return;
-
-        if (listening) {
-            micBtn.classList.add('listening');
-            micBtn.classList.remove('processing');
-            micBtn.title = 'Click to stop listening';
-            if (micIcon) {
-                micIcon.className = 'fa-solid fa-microphone-slash';
-            }
-            if (wave) wave.classList.add('active');
-            if (hintText) hintText.innerHTML =
-                '<span style="color:#ef4444;"><i class="fa-solid fa-circle" style="font-size:0.6rem;animation:micPulse 1s infinite;"></i> Listening… speak your goal, click mic to stop</span>';
-        } else {
-            micBtn.classList.remove('listening', 'processing');
-            micBtn.title = 'Click to speak';
-            if (micIcon) micIcon.className = 'fa-solid fa-microphone';
-            if (wave) wave.classList.remove('active');
-            if (hintText) hintText.innerHTML =
-                '<i class="fa-solid fa-keyboard"></i> Ctrl+Enter to submit &nbsp;·&nbsp; <i class="fa-solid fa-microphone"></i> Click mic to speak';
-        }
+    _hint(html, color) {
+        const el = document.getElementById('nl-hint-text');
+        if (!el) return;
+        el.innerHTML = color ? `<span style="color:${color};">${html}</span>` : html;
     }
 };
 
-function toggleVoiceInput() {
+async function toggleVoiceInput() {
     if (!voiceInput.isSupported) {
-        alert('Voice input is not supported in this browser. Please use Chrome or Edge.');
-        return;
+        // Try to initialise one more time — browser may have loaded SR late
+        voiceInput.init();
+        if (!voiceInput.isSupported) {
+            voiceInput._hint('🎤 Voice not supported — use Chrome or Edge on desktop', '#f59e0b');
+            return;
+        }
     }
     if (voiceInput.isListening) {
         voiceInput.stop();
     } else {
-        voiceInput.start();
+        await voiceInput.start();
     }
 }
 
-// Initialise on DOM ready
 // voiceInput.init() is called from the main DOMContentLoaded handler below
 
 // ============================================================================
