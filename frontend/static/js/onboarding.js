@@ -173,7 +173,7 @@ window.orchOnboard = {
     btn.disabled = true;
     btn.textContent = 'Loading...';
     try {
-      const res = await fetch('/api/seed-demo', { method: 'POST' });
+      const res = await (window.apiFetch || fetch)('/api/seed-demo', { method: 'POST' });
       if (res.ok) {
         btn.textContent = '✓ Loaded';
         btn.className = 'orch-ob-int-btn connected';

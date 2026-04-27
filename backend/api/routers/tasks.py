@@ -3,8 +3,10 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
+
+from backend.auth.deps import get_current_user
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Tasks"])
@@ -30,7 +32,7 @@ class TaskUpdateRequest(BaseModel):
 
 
 @router.post("/api/tasks")
-async def create_task(task: TaskCreateRequest):
+async def create_task(task: TaskCreateRequest, user=Depends(get_current_user)):
     from backend.database import create_task_in_db
     try:
         task_id = str(uuid.uuid4())[:8]
@@ -48,6 +50,7 @@ async def create_task(task: TaskCreateRequest):
             due_date=due_date_obj,
             subtasks=task.subtasks,
             dependencies=task.dependencies,
+            user_id=user["user_id"],
         )
         logger.info(f"✅ Task created: {task_id}")
         return {
@@ -64,25 +67,27 @@ async def create_task(task: TaskCreateRequest):
 
 
 @router.get("/api/tasks")
-async def list_tasks(limit: int = 100, offset: int = 0, status: Optional[str] = None):
+async def list_tasks(limit: int = 100, offset: int = 0,
+                     status: Optional[str] = None, user=Depends(get_current_user)):
     from backend.database import get_all_tasks
     try:
-        tasks = get_all_tasks(limit=limit, offset=offset, status=status)
+        tasks = get_all_tasks(limit=limit, offset=offset, status=status,
+                              user_id=user["user_id"])
         return {
             "status": "success",
             "count":  len(tasks),
             "tasks": [
                 {
-                    "task_id":     task.task_id,
-                    "title":       task.title,
-                    "description": task.description,
-                    "priority":    task.priority,
-                    "status":      task.status,
-                    "due_date":    task.due_date.isoformat() if task.due_date else None,
-                    "created_at":  task.created_at.isoformat(),
-                    "subtasks":    task.subtasks,
+                    "task_id":     t.task_id,
+                    "title":       t.title,
+                    "description": t.description,
+                    "priority":    t.priority,
+                    "status":      t.status,
+                    "due_date":    t.due_date.isoformat() if t.due_date else None,
+                    "created_at":  t.created_at.isoformat(),
+                    "subtasks":    t.subtasks,
                 }
-                for task in tasks
+                for t in tasks
             ],
         }
     except Exception as e:
@@ -91,11 +96,11 @@ async def list_tasks(limit: int = 100, offset: int = 0, status: Optional[str] = 
 
 
 @router.get("/api/tasks/{task_id}")
-async def get_task(task_id: str):
+async def get_task(task_id: str, user=Depends(get_current_user)):
     from backend.database import get_task_by_id
     try:
         task = get_task_by_id(task_id)
-        if not task:
+        if not task or task.user_id != user["user_id"]:
             raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
         return {
             "status": "success",
@@ -119,9 +124,12 @@ async def get_task(task_id: str):
 
 
 @router.put("/api/tasks/{task_id}")
-async def update_task(task_id: str, updates: TaskUpdateRequest):
-    from backend.database import update_task as db_update_task
+async def update_task(task_id: str, updates: TaskUpdateRequest, user=Depends(get_current_user)):
+    from backend.database import get_task_by_id, update_task as db_update_task
     try:
+        task = get_task_by_id(task_id)
+        if not task or task.user_id != user["user_id"]:
+            raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
         kwargs = {}
         if updates.title is not None:        kwargs["title"]        = updates.title
         if updates.description is not None:  kwargs["description"]  = updates.description
@@ -135,8 +143,6 @@ async def update_task(task_id: str, updates: TaskUpdateRequest):
             except Exception:
                 pass
         updated_task = db_update_task(task_id, **kwargs)
-        if not updated_task:
-            raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
         logger.info(f"✅ Task updated: {task_id}")
         return {
             "status":     "success",
@@ -154,16 +160,13 @@ async def update_task(task_id: str, updates: TaskUpdateRequest):
 
 
 @router.delete("/api/tasks/{task_id}")
-async def delete_task(task_id: str):
-    from backend.database import SessionLocal, Task
+async def delete_task(task_id: str, user=Depends(get_current_user)):
+    from backend.database import get_task_by_id, delete_task as db_delete_task
     try:
-        db = SessionLocal()
-        task = db.query(Task).filter(Task.task_id == task_id).first()
-        if not task:
+        task = get_task_by_id(task_id)
+        if not task or task.user_id != user["user_id"]:
             raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
-        db.delete(task)
-        db.commit()
-        db.close()
+        db_delete_task(task_id)
         logger.info(f"✅ Task deleted: {task_id}")
         return {"status": "success", "message": f"Task {task_id} deleted successfully"}
     except HTTPException:

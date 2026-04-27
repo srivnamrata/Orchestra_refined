@@ -44,6 +44,12 @@ class Config:
     # Knowledge Graph Configuration
     KNOWLEDGE_GRAPH_MAX_DEPTH = int(os.getenv("KNOWLEDGE_GRAPH_MAX_DEPTH", "5"))
     
+    # Redis Configuration
+    REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+
+    # Auth Configuration
+    SESSION_TTL_SECONDS = int(os.getenv("SESSION_TTL_SECONDS", str(7 * 24 * 3600)))  # 7 days
+
     # Logging Configuration
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 

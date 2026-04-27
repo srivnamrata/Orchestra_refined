@@ -1,4 +1,4 @@
-import { apiUrl } from './api.js';
+import { apiUrl, apiFetch } from './api.js';
 import { activityFeed } from './feed.js';
 import { showCompletionToast } from './navigation.js';
 import { renderNews, renderResearch } from './renderers.js';
@@ -33,7 +33,7 @@ export async function submitGoal() {
         </div>`;
 
     try {
-        const res = await fetch(apiUrl('/orchestrate/stream'), {
+        const res = await apiFetch('/orchestrate/stream', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ goal, priority }),

@@ -17,6 +17,7 @@ from backend.api.routers import (
     agents, books, debate, demo, events, guru,
     integrations, mock_data, notes, tasks, workflows,
 )
+from backend.auth.router import router as auth_router
 from backend.config import get_config
 
 logging.basicConfig(level="INFO")
@@ -33,6 +34,16 @@ async def lifespan(app: FastAPI):
 
     cfg = get_config()
     state.config = cfg
+
+    # ── Redis ──────────────────────────────────────────────────────────────
+    try:
+        import redis as redis_lib
+        state.redis_client = redis_lib.from_url(cfg.REDIS_URL, decode_responses=True)
+        state.redis_client.ping()
+        logger.info(f"✅ Redis connected: {cfg.REDIS_URL}")
+    except Exception as e:
+        logger.warning(f"⚠️  Redis unavailable ({e}) — auth will not work")
+        state.redis_client = None
 
     # ── Core services ──────────────────────────────────────────────────────
     from backend.services.llm_service import create_llm_service
@@ -134,9 +145,9 @@ def create_app() -> FastAPI:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=cors_origins,
-        allow_credentials=False,
+        allow_credentials=True,
         allow_methods=["*"],
-        allow_headers=["*"],
+        allow_headers=["*", "X-Session-Token"],
     )
 
     if os.path.exists(FRONTEND_DIR):
@@ -157,8 +168,16 @@ def create_app() -> FastAPI:
             return FileResponse(trace_path)
         return {"message": "Trace dashboard not found. Ensure frontend folder exists."}
 
+    @app.get("/login", include_in_schema=False)
+    async def serve_login():
+        login_path = os.path.join(FRONTEND_DIR, "login.html")
+        if os.path.exists(login_path):
+            return FileResponse(login_path)
+        return {"message": "Login page not found."}
+
     # ── Routers ───────────────────────────────────────────────────────────
     for router in [
+        auth_router,
         tasks.router,
         events.router,
         notes.router,

@@ -1,4 +1,4 @@
-import { apiUrl } from './api.js';
+import { apiFetch } from './api.js';
 import { activityFeed } from './feed.js';
 
 export async function submitVeda(text) {
@@ -7,7 +7,7 @@ export async function submitVeda(text) {
     if (inp) inp.value = '';
     activityFeed.log(`📚 Veda: processing "${text}"`, 'status', 'VEDA');
     try {
-        const res  = await fetch(apiUrl('/api/veda'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text }) });
+        const res  = await apiFetch('/api/veda', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text }) });
         const data = await res.json();
         if (data.status === 'success') {
             activityFeed.log(`📚 Veda: ${data.result?.message || 'Done!'}`, 'success', 'VEDA');
@@ -22,7 +22,7 @@ export async function fetchBooks() {
     const shelf = document.getElementById('bookshelf');
     if (!shelf) return;
     try {
-        const res   = await fetch(apiUrl('/api/books'));
+        const res   = await apiFetch('/api/books');
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const books = await res.json();
         if (!books?.length) {

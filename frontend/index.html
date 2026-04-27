@@ -2095,12 +2095,12 @@ html.dark .completion-toast { box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1p
 
   <!-- User -->
   <div class="user-row">
-    <div class="avatar">AD</div>
+    <div class="avatar" id="user-avatar">?</div>
     <div>
-      <div class="user-name">Administrator</div>
-      <div class="user-email">admin@orchestra.ai</div>
+      <div class="user-name" id="user-name">Loading…</div>
+      <div class="user-email" id="user-email"></div>
     </div>
-    <button class="user-gear"><span class="ms">settings</span></button>
+    <button class="user-gear" title="Sign out" onclick="orchestraLogout()"><span class="ms">logout</span></button>
   </div>
 </aside>
 
@@ -2936,5 +2936,48 @@ html.dark .completion-toast { box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1p
     const pane = document.getElementById('pane-' + type);
     if(pane) pane.classList.add('active');
   };
+</script>
+
+<script>
+// ── Auth guard + user menu ─────────────────────────────────────────────────
+(function() {
+  const token = localStorage.getItem('orch-session-token');
+  if (!token) { window.location.href = '/login'; return; }
+
+  // Populate user info from cache immediately, then verify with server
+  try {
+    const cached = JSON.parse(localStorage.getItem('orch-user') || '{}');
+    if (cached.name) {
+      document.getElementById('user-name').textContent  = cached.name;
+      document.getElementById('user-email').textContent = cached.email || '';
+      document.getElementById('user-avatar').textContent = cached.name.charAt(0).toUpperCase();
+    }
+  } catch (_) {}
+
+  // Verify session is still valid
+  fetch('/auth/me', { headers: { 'X-Session-Token': token } })
+    .then(r => {
+      if (!r.ok) { localStorage.removeItem('orch-session-token'); window.location.href = '/login'; return; }
+      return r.json();
+    })
+    .then(user => {
+      if (!user) return;
+      document.getElementById('user-name').textContent  = user.name;
+      document.getElementById('user-email').textContent = user.email;
+      document.getElementById('user-avatar').textContent = user.name.charAt(0).toUpperCase();
+      localStorage.setItem('orch-user', JSON.stringify(user));
+    })
+    .catch(() => { /* network error — stay logged in using cached data */ });
+})();
+
+window.orchestraLogout = function() {
+  const token = localStorage.getItem('orch-session-token');
+  if (token) {
+    fetch('/auth/logout', { method: 'POST', headers: { 'X-Session-Token': token } }).catch(() => {});
+  }
+  localStorage.removeItem('orch-session-token');
+  localStorage.removeItem('orch-user');
+  window.location.href = '/login';
+};
 </script>
 </body></html>

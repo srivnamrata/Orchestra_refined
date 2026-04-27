@@ -1,4 +1,4 @@
-import { apiUrl } from './api.js';
+import { apiFetch } from './api.js';
 import { activityFeed } from './feed.js';
 
 export async function runGuruAudit() {
@@ -13,7 +13,7 @@ export async function runGuruAudit() {
     </div>`;
 
     try {
-        const res  = await fetch(apiUrl('/api/guru/audit'), { method: 'POST' });
+        const res  = await apiFetch('/api/guru/audit', { method: 'POST' });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         if (data.status !== 'success') throw new Error(data.message || 'Audit failed');

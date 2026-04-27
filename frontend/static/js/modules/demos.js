@@ -1,4 +1,4 @@
-import { apiUrl } from './api.js';
+import { apiUrl, apiFetch } from './api.js';
 import { activityFeed } from './feed.js';
 import { renderVibeCheck, renderDebate, renderCriticAnalysis, renderNews, renderResearch, renderGitHub, renderSlack, renderEmail, renderTasks, renderSchedule } from './renderers.js';
 
@@ -34,7 +34,7 @@ export async function runDemo(type) {
     activityFeed.log(`🏃 Starting ${cfg.name} sequence…`, 'status', 'SYSTEM');
     try {
         const method = ['tasks','schedule'].includes(type) ? 'GET' : 'POST';
-        const res = await fetch(apiUrl(cfg.endpoint), {
+        const res = await apiFetch(cfg.endpoint, {
             method,
             headers: { 'Content-Type': 'application/json' },
             body: type === 'debate' ? JSON.stringify({

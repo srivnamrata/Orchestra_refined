@@ -1,4 +1,4 @@
-import { apiUrl } from './api.js';
+import { apiUrl, apiFetch } from './api.js';
 import { activityFeed } from './feed.js';
 
 export function downloadBlob(content, mimeType, filename) {
@@ -64,7 +64,7 @@ export function commitDraftTasks(draftId) {
     });
     if (!selected.length) { alert('Please select at least one task.'); return; }
     activityFeed.log(`Committing ${selected.length} tasks to your database…`, 'status', 'SYSTEM');
-    Promise.all(selected.map(t => fetch(apiUrl('/api/tasks'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(t) }))).then(() => {
+    Promise.all(selected.map(t => apiFetch('/api/tasks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(t) }))).then(() => {
         container.innerHTML = `<div style="padding:20px;text-align:center;background:var(--g-green-light);color:var(--g-green);border-radius:12px"><span class="ms" style="font-size:32px;margin-bottom:8px">check_circle</span><div style="font-weight:700">Tasks Successfully Committed</div><div style="font-size:11px">${selected.length} items added to your Workspace.</div><button class="export-btn" style="margin-top:12px" onclick="window.switchView('tasks')">View Workspace</button></div>`;
         activityFeed.log(`Successfully created ${selected.length} tasks.`, 'success', 'SYSTEM');
         if (typeof window.fetchTasks === 'function') window.fetchTasks();
@@ -79,7 +79,7 @@ export function submitFeedback(btn, type) {
     countEl.textContent = parseInt(countEl.textContent) + 1;
     const agent = btn.closest('.f-body').querySelector('.f-agent').textContent.trim();
     activityFeed.log(`Feedback captured for ${agent}: ${type.toUpperCase()}`, 'status', 'ACADEMY');
-    fetch(apiUrl('/api/feedback'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ agent, type, timestamp: new Date().toISOString() }) }).catch(() => {});
+    apiFetch('/api/feedback', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ agent, type, timestamp: new Date().toISOString() }) }).catch(() => {});
 }
 
 export function setGoal(t) {

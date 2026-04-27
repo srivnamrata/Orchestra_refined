@@ -3,10 +3,11 @@ import uuid
 import logging
 from typing import Dict
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from backend.api import state
+from backend.auth.deps import get_current_user
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -19,9 +20,9 @@ class BookCreateRequest(BaseModel):
 
 
 @router.get("/api/books", tags=["Veda"])
-async def get_books(status: str = None):
+async def get_books(status: str = None, user=Depends(get_current_user)):
     from backend.database import get_all_books
-    books = get_all_books(status=status)
+    books = get_all_books(status=status, user_id=user["user_id"])
     return [
         {
             "id":           b.book_id,
@@ -38,21 +39,22 @@ async def get_books(status: str = None):
 
 
 @router.post("/api/books", tags=["Veda"])
-async def create_book(data: Dict):
+async def create_book(data: Dict, user=Depends(get_current_user)):
     from backend.database import create_book_in_db
     b = create_book_in_db(
         book_id=f"book-{uuid.uuid4().hex[:6]}",
         title=data["title"],
         author=data.get("author"),
         total_pages=data.get("total_pages", 300),
+        user_id=user["user_id"],
     )
     return {"status": "success", "id": b.book_id}
 
 
 @router.post("/api/veda", tags=["Veda"])
-async def veda_command(data: Dict):
+async def veda_command(data: Dict, user=Depends(get_current_user)):
     """Natural language book management — regex fast-path + LLM fallback."""
-    from backend.database import create_book_in_db, get_all_books, get_session, update_book_progress
+    from backend.database import create_book_in_db, get_session, update_book_progress
     from backend.database import Book as BookModel
 
     text = data.get("text", "").strip()
@@ -60,6 +62,7 @@ async def veda_command(data: Dict):
         return {"status": "error", "message": "No text provided"}
 
     text_lower = text.lower()
+    user_id    = user["user_id"]
 
     add_match = re.search(
         r"(?:add|reading|started?|begin|track)\s+[\"']?(.+?)[\"']?"
@@ -85,6 +88,7 @@ async def veda_command(data: Dict):
                 title=raw_title,
                 status="in-progress" if page else "to-read",
                 total_pages=300,
+                user_id=user_id,
             )
             if page:
                 update_book_progress(book_id, page)
@@ -96,14 +100,18 @@ async def veda_command(data: Dict):
             page      = int(m.group(1)) if page_match else int(m.group(2))
             title_raw = (m.group(2) if page_match else m.group(1)).strip()
             db        = get_session()
-            book      = db.query(BookModel).filter(BookModel.title.ilike(f"%{title_raw}%")).first()
+            book      = db.query(BookModel).filter(
+                BookModel.title.ilike(f"%{title_raw}%"),
+                BookModel.user_id == user_id,
+            ).first()
             db.close()
             if book:
                 update_book_progress(book.book_id, page)
                 pct = int(page / book.total_pages * 100) if book.total_pages else 0
                 return {"status": "success", "result": {"message": f"Updated '{book.title}' to page {page} ({pct}%)."}}
             book_id = f"book-{uuid.uuid4().hex[:6]}"
-            create_book_in_db(book_id=book_id, title=title_raw.title(), status="in-progress", total_pages=300)
+            create_book_in_db(book_id=book_id, title=title_raw.title(),
+                              status="in-progress", total_pages=300, user_id=user_id)
             update_book_progress(book_id, page)
             return {"status": "success", "result": {"message": f"Added '{title_raw.title()}' and set page to {page}."}}
 

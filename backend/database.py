@@ -11,7 +11,7 @@ Connection strategy:
 import os
 import logging
 from datetime import datetime
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, Boolean, Text, Float, text
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, Boolean, Text, Float, text, ForeignKey
 from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy.pool import QueuePool, StaticPool
 
@@ -103,6 +103,15 @@ Base = declarative_base()
 # MODELS
 # ============================================================================
 
+class User(Base):
+    __tablename__ = "users"
+    id            = Column(Integer,     primary_key=True, index=True)
+    email         = Column(String(255), unique=True, index=True, nullable=False)
+    name          = Column(String(255), nullable=False)
+    password_hash = Column(String(255), nullable=False)
+    created_at    = Column(DateTime,    default=datetime.utcnow, index=True)
+
+
 class Task(Base):
     __tablename__ = "tasks"
     id           = Column(Integer,     primary_key=True, index=True)
@@ -120,6 +129,7 @@ class Task(Base):
     assigned_to  = Column(String(255), nullable=True)
     custom_data  = Column(Text,        nullable=True)
     source       = Column(String(50),  nullable=True)
+    user_id      = Column(Integer,     nullable=True, index=True)
 
 
 class Note(Base):
@@ -136,6 +146,7 @@ class Note(Base):
     updated_at  = Column(DateTime,    default=datetime.utcnow, onupdate=datetime.utcnow)
     created_by  = Column(String(255), nullable=True)
     custom_data = Column(Text,        nullable=True)
+    user_id     = Column(Integer,     nullable=True, index=True)
 
 
 class CalendarEvent(Base):
@@ -160,6 +171,7 @@ class CalendarEvent(Base):
     created_by       = Column(String(255), nullable=True)
     custom_data      = Column(Text,        nullable=True)
     source           = Column(String(50),  nullable=True)
+    user_id          = Column(Integer,     nullable=True, index=True)
 
 
 class WorkflowHistory(Base):
@@ -177,6 +189,7 @@ class WorkflowHistory(Base):
     created_at     = Column(DateTime,   default=datetime.utcnow, index=True)
     completed_at   = Column(DateTime,   nullable=True)
     error          = Column(Text,       nullable=True)
+    user_id        = Column(Integer,    nullable=True, index=True)
 
 
 class Book(Base):
@@ -191,6 +204,7 @@ class Book(Base):
     created_at   = Column(DateTime,    default=datetime.utcnow, index=True)
     updated_at   = Column(DateTime,    default=datetime.utcnow, onupdate=datetime.utcnow)
     finished_at  = Column(DateTime,    nullable=True)
+    user_id      = Column(Integer,     nullable=True, index=True)
 
 
 class WorkflowState(Base):
@@ -208,6 +222,7 @@ class WorkflowState(Base):
     started_at     = Column(DateTime,   default=datetime.utcnow, index=True)
     updated_at     = Column(DateTime,   default=datetime.utcnow, onupdate=datetime.utcnow)
     completed_at   = Column(DateTime,   nullable=True)
+    user_id        = Column(Integer,    nullable=True, index=True)
 
 
 class CriticDecision(Base):
@@ -233,7 +248,13 @@ def _migrate_add_columns() -> None:
     engine = get_engine()
     # (table, column, DDL type)
     additions = [
-        ("workflow_state", "reasoning_json", "TEXT"),
+        ("workflow_state",   "reasoning_json", "TEXT"),
+        ("tasks",            "user_id",        "INTEGER"),
+        ("notes",            "user_id",        "INTEGER"),
+        ("calendar_events",  "user_id",        "INTEGER"),
+        ("workflow_history", "user_id",        "INTEGER"),
+        ("workflow_state",   "user_id",        "INTEGER"),
+        ("books",            "user_id",        "INTEGER"),
     ]
     with engine.connect() as conn:
         for table, col, col_type in additions:
@@ -264,16 +285,49 @@ def get_db_session():
 
 
 # ============================================================================
+# USERS
+# ============================================================================
+
+def create_user(email: str, name: str, password_hash: str):
+    db = get_session()
+    try:
+        u = User(email=email, name=name, password_hash=password_hash)
+        db.add(u); db.commit(); db.refresh(u)
+        return u
+    except Exception as e:
+        db.rollback(); raise
+    finally:
+        db.close()
+
+
+def get_user_by_email(email: str):
+    db = get_session()
+    try:
+        return db.query(User).filter(User.email == email).first()
+    finally:
+        db.close()
+
+
+def get_user_by_id(user_id: int):
+    db = get_session()
+    try:
+        return db.query(User).filter(User.id == user_id).first()
+    finally:
+        db.close()
+
+
+# ============================================================================
 # TASKS
 # ============================================================================
 
 def create_task_in_db(task_id, title, description=None, priority="medium",
-                      due_date=None, subtasks=0, dependencies=None, source="manual"):
+                      due_date=None, subtasks=0, dependencies=None, source="manual",
+                      user_id=None):
     db = get_session()
     try:
         t = Task(task_id=task_id, title=title, description=description,
                  priority=priority, due_date=due_date, subtasks=subtasks,
-                 dependencies=dependencies, source=source)
+                 dependencies=dependencies, source=source, user_id=user_id)
         db.add(t); db.commit(); db.refresh(t)
         return t
     except Exception as e:
@@ -282,12 +336,14 @@ def create_task_in_db(task_id, title, description=None, priority="medium",
         db.close()
 
 
-def get_all_tasks(limit=100, offset=0, status=None):
+def get_all_tasks(limit=100, offset=0, status=None, user_id=None):
     db = get_session()
     try:
         q = db.query(Task)
         if status:
             q = q.filter(Task.status == status)
+        if user_id is not None:
+            q = q.filter(Task.user_id == user_id)
         return q.order_by(Task.created_at.desc()).limit(limit).offset(offset).all()
     finally:
         db.close()
@@ -333,11 +389,11 @@ def delete_task(task_id):
 # NOTES
 # ============================================================================
 
-def create_note_in_db(note_id, title, content, category=None, tags=None):
+def create_note_in_db(note_id, title, content, category=None, tags=None, user_id=None):
     db = get_session()
     try:
         n = Note(note_id=note_id, title=title, content=content,
-                 category=category, tags=tags)
+                 category=category, tags=tags, user_id=user_id)
         db.add(n); db.commit(); db.refresh(n)
         return n
     except Exception as e:
@@ -346,11 +402,12 @@ def create_note_in_db(note_id, title, content, category=None, tags=None):
         db.close()
 
 
-def get_all_notes(limit=100, offset=0, category=None):
+def get_all_notes(limit=100, offset=0, category=None, user_id=None):
     db = get_session()
     try:
         q = db.query(Note).filter(Note.is_archived == False)
         if category: q = q.filter(Note.category == category)
+        if user_id is not None: q = q.filter(Note.user_id == user_id)
         return q.order_by(Note.created_at.desc()).limit(limit).offset(offset).all()
     finally:
         db.close()
@@ -398,13 +455,15 @@ def search_notes(search_query, limit=50):
 
 def create_event_in_db(event_id, title, start_time, end_time,
                        location=None, duration_minutes=60,
-                       attendees=None, description=None, source="manual"):
+                       attendees=None, description=None, source="manual",
+                       user_id=None):
     db = get_session()
     try:
         e = CalendarEvent(event_id=event_id, title=title,
                           start_time=start_time, end_time=end_time,
                           location=location, duration_minutes=duration_minutes,
-                          attendees=attendees, description=description, source=source)
+                          attendees=attendees, description=description, source=source,
+                          user_id=user_id)
         db.add(e); db.commit(); db.refresh(e)
         return e
     except Exception as e:
@@ -413,12 +472,14 @@ def create_event_in_db(event_id, title, start_time, end_time,
         db.close()
 
 
-def get_all_events(limit=100, offset=0, upcoming_only=False):
+def get_all_events(limit=100, offset=0, upcoming_only=False, user_id=None):
     db = get_session()
     try:
         q = db.query(CalendarEvent)
         if upcoming_only:
             q = q.filter(CalendarEvent.start_time >= datetime.utcnow())
+        if user_id is not None:
+            q = q.filter(CalendarEvent.user_id == user_id)
         return q.order_by(CalendarEvent.start_time.asc()).limit(limit).offset(offset).all()
     finally:
         db.close()
@@ -467,14 +528,14 @@ def update_event(event_id, **kwargs):
 
 def save_workflow_history(workflow_id, goal, priority="medium", steps_count=0,
                           tasks_created=0, events_created=0, source="text",
-                          status="completed", error=None):
+                          status="completed", error=None, user_id=None):
     db = get_session()
     try:
         wf = WorkflowHistory(
             workflow_id=workflow_id, goal=goal, priority=priority,
             steps_count=steps_count, tasks_created=tasks_created,
             events_created=events_created, source=source, status=status,
-            error=error,
+            error=error, user_id=user_id,
             completed_at=datetime.utcnow() if status != "running" else None,
         )
         db.add(wf); db.commit()
@@ -485,12 +546,13 @@ def save_workflow_history(workflow_id, goal, priority="medium", steps_count=0,
         db.close()
 
 
-def get_workflow_history(limit=50):
+def get_workflow_history(limit=50, user_id=None):
     db = get_session()
     try:
-        return db.query(WorkflowHistory)\
-                 .order_by(WorkflowHistory.created_at.desc())\
-                 .limit(limit).all()
+        q = db.query(WorkflowHistory).order_by(WorkflowHistory.created_at.desc())
+        if user_id is not None:
+            q = q.filter(WorkflowHistory.user_id == user_id)
+        return q.limit(limit).all()
     finally:
         db.close()
 
@@ -499,10 +561,11 @@ def get_workflow_history(limit=50):
 # BOOKS (ALEXANDRIA)
 # ============================================================================
 
-def create_book_in_db(book_id, title, author=None, status="to-read", total_pages=1):
+def create_book_in_db(book_id, title, author=None, status="to-read", total_pages=1, user_id=None):
     db = get_session()
     try:
-        b = Book(book_id=book_id, title=title, author=author, status=status, total_pages=total_pages)
+        b = Book(book_id=book_id, title=title, author=author, status=status,
+                 total_pages=total_pages, user_id=user_id)
         db.add(b); db.commit(); db.refresh(b)
         return b
     except Exception as e:
@@ -511,11 +574,12 @@ def create_book_in_db(book_id, title, author=None, status="to-read", total_pages
         db.close()
 
 
-def get_all_books(limit=100, status=None):
+def get_all_books(limit=100, status=None, user_id=None):
     db = get_session()
     try:
         q = db.query(Book)
         if status: q = q.filter(Book.status == status)
+        if user_id is not None: q = q.filter(Book.user_id == user_id)
         return q.order_by(Book.updated_at.desc()).limit(limit).all()
     finally:
         db.close()

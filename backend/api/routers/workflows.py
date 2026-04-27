@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime, timedelta
 from typing import AsyncGenerator, Dict, Any, Optional, Tuple
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
@@ -14,6 +14,7 @@ from backend.api import state
 from backend.api.helpers import _sse, _concern_to_dict
 from backend.agents.orchestrator_agent import WorkflowRequest
 from backend.services.llm_utils import parse_llm_json
+from backend.auth.deps import get_current_user, get_current_user_optional
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -176,7 +177,7 @@ def _heuristic_plan(goal: str, priority: str, now: datetime) -> list:
     return steps
 
 
-async def _stream_orchestration(goal: str, priority: str, workflow_id: str) -> AsyncGenerator[str, None]:
+async def _stream_orchestration(goal: str, priority: str, workflow_id: str, user_id=None) -> AsyncGenerator[str, None]:
     from backend.database import create_task_in_db, create_event_in_db
 
     ts = lambda: datetime.now().strftime("%H:%M:%S")
@@ -736,6 +737,7 @@ Respond ONLY with a valid JSON array, no markdown fences:
             workflow_id=workflow_id, goal=goal, priority=priority,
             steps_count=len(steps), tasks_created=len(tasks_made),
             events_created=len(events_made), source="voice" if len(goal) < 100 else "text",
+            user_id=user_id,
         )
     except Exception as wh_err:
         logger.warning(f"Workflow history save failed: {wh_err}")
@@ -803,11 +805,12 @@ async def get_critic_audit(workflow_id: str):
 
 
 @router.post("/orchestrate/stream", tags=["Orchestrator"])
-async def orchestrate_stream(request: OrchestrateRequest):
+async def orchestrate_stream(request: OrchestrateRequest, user=Depends(get_current_user_optional)):
     workflow_id = str(uuid.uuid4())[:8]
-    logger.info(f"🌊 Streaming orchestration {workflow_id}: {request.goal}")
+    user_id     = user["user_id"] if user else None
+    logger.info(f"🌊 Streaming orchestration {workflow_id}: {request.goal} (user={user_id})")
     return StreamingResponse(
-        _stream_orchestration(request.goal, request.priority, workflow_id),
+        _stream_orchestration(request.goal, request.priority, workflow_id, user_id=user_id),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )

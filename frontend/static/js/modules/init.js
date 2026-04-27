@@ -1,7 +1,7 @@
 import { activityFeed } from './feed.js';
-import { switchView }   from './navigation.js';
-import { applyTheme }   from './theme.js';
-import { runDemo }      from './demos.js';
+import { switchView } from './navigation.js';
+import { applyTheme } from './theme.js';
+import { runDemo } from './demos.js';
 
 export function initUI() {
     const greeting = document.getElementById('greetingLine');
@@ -44,7 +44,7 @@ tick();
 
 // ── Onboarding restart ───────────────────────────────────────────────────────
 export function restartTour() {
-    try { localStorage.removeItem('orch-onboarded'); } catch (e) {}
+    try { localStorage.removeItem('orch-onboarded'); } catch (e) { }
     if (window.orchOnboard) window.orchOnboard.open();
 }
 

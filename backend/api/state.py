@@ -41,3 +41,4 @@ veda_librarian    = None
 param_mitra       = None
 debate_engine     = None
 config            = None
+redis_client      = None

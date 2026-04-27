@@ -3,8 +3,10 @@ import logging
 from datetime import datetime, timedelta
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
+
+from backend.auth.deps import get_current_user
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Events"])
@@ -81,7 +83,7 @@ def _mock_events_response():
 
 
 @router.post("/api/events")
-async def create_event(event: EventCreateRequest):
+async def create_event(event: EventCreateRequest, user=Depends(get_current_user)):
     from backend.database import create_event_in_db
     try:
         event_id   = str(uuid.uuid4())[:8]
@@ -96,6 +98,7 @@ async def create_event(event: EventCreateRequest):
             duration_minutes=event.duration_minutes,
             attendees=event.attendees,
             description=event.description,
+            user_id=user["user_id"],
         )
         logger.info(f"✅ Event created: {event_id}")
         return {
@@ -109,34 +112,35 @@ async def create_event(event: EventCreateRequest):
             "message":    "Event created successfully",
         }
     except ValueError as e:
-        logger.error(f"❌ Invalid datetime format: {e}")
-        raise HTTPException(status_code=400, detail=f"Invalid datetime format. Use ISO format (YYYY-MM-DDTHH:MM:SS): {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Invalid datetime format: {str(e)}")
     except Exception as e:
         logger.error(f"❌ Error creating event: {e}")
         raise HTTPException(status_code=500, detail=f"Error creating event: {str(e)}")
 
 
 @router.get("/api/events")
-async def list_events(limit: int = 100, offset: int = 0, upcoming_only: bool = False):
+async def list_events(limit: int = 100, offset: int = 0,
+                      upcoming_only: bool = False, user=Depends(get_current_user)):
     from backend.database import get_all_events
     try:
-        events = get_all_events(limit=limit, offset=offset, upcoming_only=upcoming_only)
+        events = get_all_events(limit=limit, offset=offset, upcoming_only=upcoming_only,
+                                user_id=user["user_id"])
         return {
             "status": "success",
             "count":  len(events),
             "events": [
                 {
-                    "event_id":         event.event_id,
-                    "title":            event.title,
-                    "description":      event.description,
-                    "start_time":       event.start_time.isoformat() if event.start_time else None,
-                    "end_time":         event.end_time.isoformat() if event.end_time else None,
-                    "location":         event.location,
-                    "duration_minutes": event.duration_minutes,
-                    "status":           event.status,
-                    "created_at":       event.created_at.isoformat(),
+                    "event_id":         e.event_id,
+                    "title":            e.title,
+                    "description":      e.description,
+                    "start_time":       e.start_time.isoformat() if e.start_time else None,
+                    "end_time":         e.end_time.isoformat() if e.end_time else None,
+                    "location":         e.location,
+                    "duration_minutes": e.duration_minutes,
+                    "status":           e.status,
+                    "created_at":       e.created_at.isoformat(),
                 }
-                for event in events
+                for e in events
             ],
         }
     except Exception as e:
@@ -145,24 +149,25 @@ async def list_events(limit: int = 100, offset: int = 0, upcoming_only: bool = F
 
 
 @router.get("/api/events/upcoming/{days}")
-async def get_upcoming_events(days: int = 7):
+async def get_upcoming_events(days: int = 7, user=Depends(get_current_user)):
     from backend.database import get_upcoming_events as db_get_upcoming
     try:
         events = db_get_upcoming(days_ahead=days)
+        events = [e for e in events if e.user_id == user["user_id"]]
         return {
             "status":     "success",
             "count":      len(events),
             "range_days": days,
             "events": [
                 {
-                    "event_id":   event.event_id,
-                    "title":      event.title,
-                    "start_time": event.start_time.isoformat(),
-                    "end_time":   event.end_time.isoformat(),
-                    "location":   event.location,
-                    "created_at": event.created_at.isoformat(),
+                    "event_id":   e.event_id,
+                    "title":      e.title,
+                    "start_time": e.start_time.isoformat(),
+                    "end_time":   e.end_time.isoformat(),
+                    "location":   e.location,
+                    "created_at": e.created_at.isoformat(),
                 }
-                for event in events
+                for e in events
             ],
         }
     except Exception as e:
@@ -173,11 +178,11 @@ async def get_upcoming_events(days: int = 7):
 
 
 @router.get("/api/events/{event_id}")
-async def get_event(event_id: str):
+async def get_event(event_id: str, user=Depends(get_current_user)):
     from backend.database import get_event_by_id
     try:
         event = get_event_by_id(event_id)
-        if not event:
+        if not event or event.user_id != user["user_id"]:
             raise HTTPException(status_code=404, detail=f"Event {event_id} not found")
         return {
             "status": "success",
@@ -202,9 +207,12 @@ async def get_event(event_id: str):
 
 
 @router.put("/api/events/{event_id}")
-async def update_event(event_id: str, updates: EventUpdateRequest):
-    from backend.database import update_event as db_update_event
+async def update_event(event_id: str, updates: EventUpdateRequest, user=Depends(get_current_user)):
+    from backend.database import get_event_by_id, update_event as db_update_event
     try:
+        event = get_event_by_id(event_id)
+        if not event or event.user_id != user["user_id"]:
+            raise HTTPException(status_code=404, detail=f"Event {event_id} not found")
         kwargs = {}
         if updates.title is not None:            kwargs["title"]            = updates.title
         if updates.location is not None:         kwargs["location"]         = updates.location
@@ -223,8 +231,6 @@ async def update_event(event_id: str, updates: EventUpdateRequest):
             except Exception:
                 pass
         updated_event = db_update_event(event_id, **kwargs)
-        if not updated_event:
-            raise HTTPException(status_code=404, detail=f"Event {event_id} not found")
         logger.info(f"✅ Event updated: {event_id}")
         return {
             "status":     "success",
@@ -243,15 +249,16 @@ async def update_event(event_id: str, updates: EventUpdateRequest):
 
 
 @router.delete("/api/events/{event_id}")
-async def delete_event(event_id: str):
-    from backend.database import SessionLocal, CalendarEvent
+async def delete_event(event_id: str, user=Depends(get_current_user)):
+    from backend.database import get_event_by_id, get_session, CalendarEvent
     try:
-        db    = SessionLocal()
-        event = db.query(CalendarEvent).filter(CalendarEvent.event_id == event_id).first()
-        if not event:
+        event = get_event_by_id(event_id)
+        if not event or event.user_id != user["user_id"]:
             raise HTTPException(status_code=404, detail=f"Event {event_id} not found")
-        db.delete(event)
-        db.commit()
+        db = get_session()
+        ev = db.query(CalendarEvent).filter(CalendarEvent.event_id == event_id).first()
+        if ev:
+            db.delete(ev); db.commit()
         db.close()
         logger.info(f"✅ Event deleted: {event_id}")
         return {"status": "success", "message": f"Event {event_id} deleted successfully"}

@@ -19,6 +19,33 @@ export function apiUrl(path) {
     return `${ORCHESTRA_API_BASE}${path.startsWith('/') ? path : `/${path}`}`;
 }
 
+// ── Session token helpers ────────────────────────────────────────────────────
+export function getSessionToken() {
+    try { return localStorage.getItem('orch-session-token') || ''; } catch (_) { return ''; }
+}
+
+export function setSessionToken(token) {
+    try { localStorage.setItem('orch-session-token', token); } catch (_) {}
+}
+
+export function clearSessionToken() {
+    try { localStorage.removeItem('orch-session-token'); } catch (_) {}
+}
+
+export function isAuthenticated() {
+    return !!getSessionToken();
+}
+
+// ── Authenticated fetch wrapper ──────────────────────────────────────────────
+export function apiFetch(path, options = {}) {
+    const url     = /^https?:\/\//i.test(path) ? path : apiUrl(path);
+    const token   = getSessionToken();
+    const headers = { ...(options.headers || {}) };
+    if (token) headers['X-Session-Token'] = token;
+    return fetch(url, { ...options, headers });
+}
+
 // Expose for legacy inline scripts and console debugging
 window.ORCHESTRA_API_BASE = ORCHESTRA_API_BASE;
-window.apiUrl = apiUrl;
+window.apiUrl   = apiUrl;
+window.apiFetch = apiFetch;
