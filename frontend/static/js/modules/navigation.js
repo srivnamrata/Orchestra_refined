@@ -54,6 +54,24 @@ document.addEventListener('keydown', e => {
     if (e.key === 'Escape') closePalette();
 });
 
+// ── Task completion toast ─────────────────────────────────────────────────────
+document.addEventListener('click', e => {
+    const check = e.target.closest('.ti-check');
+    if (!check) return;
+    const wasDown = check.classList.contains('done');
+    check.classList.toggle('done');
+    check.textContent = wasDown ? '' : '✓';
+    const titleEl = check.closest('.task-intel-item')?.querySelector('.ti-title');
+    if (titleEl) titleEl.classList.toggle('done-text', !wasDown);
+    const priorityEl = check.closest('.task-intel-item')?.querySelector('.ti-priority');
+    if (priorityEl && !wasDown) {
+        priorityEl.style.background = 'var(--g-green-light)';
+        priorityEl.style.color = 'var(--g-green)';
+        priorityEl.textContent = 'done';
+    }
+    if (!wasDown) showCompletionToast(titleEl?.textContent || 'Task');
+});
+
 window.switchView        = switchView;
 window.openPalette       = openPalette;
 window.closePalette      = closePalette;
