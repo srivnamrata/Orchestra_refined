@@ -2063,11 +2063,19 @@ html.dark .completion-toast { box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1p
     <div class="nav-item"><span class="ms">bolt</span> Active Workflows <span class="nav-badge nb-blue">3</span></div>
     <div class="nav-item" onclick="window.switchView('tasks')"><span class="ms">task_alt</span> All Tasks <span class="nav-badge nb-gray">24</span></div>
     <div class="nav-item" onclick="window.switchView('outputs')"><span class="ms">folder_open</span> Outputs</div>
-    <div class="nav-label">Intelligence</div>
+    
+    <div class="nav-label">Specialists</div>
+    <div class="nav-item" onclick="window.fetchIntel('news')"><span class="ms">newspaper</span> News Agent</div>
+    <div class="nav-item" onclick="window.fetchIntel('research')"><span class="ms">microscope</span> Research Agent</div>
+    <div class="nav-item" onclick="window.switchView('outputs')"><span class="ms">terminal</span> Coder Agent</div>
+    <div class="nav-item" onclick="window.switchView('outputs')"><span class="ms">edit_note</span> Writer Agent</div>
+
+    <div class="nav-label">System Monitoring</div>
     <div class="nav-item" onclick="window.switchView('trace')" style="cursor:pointer"><span class="ms">psychology</span> Agent Reasoning</div>
     <div class="nav-item" onclick="window.switchView('agents')"><span class="ms">hub</span> Agent Health <span class="nav-badge nb-green">4 live</span></div>
     <div class="nav-item" onclick="window.switchView('debates')"><span class="ms">swords</span> Debates</div>
     <div class="nav-item" onclick="window.switchView('settings')"><span class="ms">shield</span> Safety Audit</div>
+    
     <div class="nav-label">Integrations</div>
     <div class="nav-item" onclick="window.switchView('github')"><span class="ms">code</span> GitHub <span class="nav-badge nb-blue">stub</span></div>
     <div class="nav-item" onclick="window.switchView('slack')"><span class="ms">forum</span> Slack <span class="nav-badge nb-blue">stub</span></div>
@@ -2082,8 +2090,6 @@ html.dark .completion-toast { box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1p
     <div class="sa-label">Quick Actions</div>
     <button class="sa-btn" onclick="runDemo('critic')"><span class="ms">manage_search</span> Critic Replan</button>
     <button class="sa-btn" onclick="runDemo('scan')"><span class="ms">radar</span> Run Scan</button>
-    <button class="sa-btn" onclick="runDemo('vibe')"><span class="ms">check_circle</span> Vibe Check</button>
-    <button class="sa-btn" onclick="runDemo('debate')"><span class="ms">gavel</span> Agent Debate</button>
   </div>
 
   <!-- User -->
@@ -2144,10 +2150,10 @@ html.dark .completion-toast { box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1p
       <div>
         <div class="g-hi" id="greetingLine"></div>
         <div class="g-title">Welcome back, Administrator 👋</div>
-        <div class="g-sub">3 workflows active · Critic flagged 1 bottleneck · 7 tasks completed</div>
+        <div class="g-sub">3 workflows active · 1 pending debate · 7 tasks completed</div>
         <div class="g-btns" style="margin-top: 16px">
-          <button class="g-btn outline" onclick="window.switchView('library')"><span class="ms sm">auto_stories</span> Veda Library</button>
-          <button class="g-btn outline" onclick="window.switchView('guru')"><span class="ms sm">self_improvement</span> Guru Audit</button>
+          <button class="g-btn outline" onclick="window.switchView('debates')"><span class="ms sm">swords</span> Agent Debate</button>
+          <button class="g-btn outline" onclick="window.switchView('settings')"><span class="ms sm">shield</span> Safety Audit</button>
         </div>
       </div>
       <div class="g-right">
@@ -2855,4 +2861,25 @@ html.dark .completion-toast { box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1p
 </div>
 
 <script src="/static/js/onboarding.js" defer></script>
+<script>
+  // Navigation Bridge: Fixes clicks on Veda, Agent Health, etc.
+  window.switchView = window.switchView || function(viewId) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    const target = document.getElementById(viewId);
+    if (target) {
+        target.classList.add('active');
+        document.querySelector('.page-title').textContent = viewId.charAt(0).toUpperCase() + viewId.slice(1);
+    }
+    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+    const navItem = Array.from(document.querySelectorAll('.nav-item')).find(i => i.textContent.toLowerCase().includes(viewId.toLowerCase()));
+    if (navItem) navItem.classList.add('active');
+  };
+  window.fetchIntel = window.fetchIntel || function(type, btn) {
+    document.querySelectorAll('.intel-tab').forEach(t => t.classList.remove('active'));
+    if(btn) btn.classList.add('active');
+    document.querySelectorAll('.intel-pane').forEach(p => p.classList.remove('active'));
+    const pane = document.getElementById('pane-' + type);
+    if(pane) pane.classList.add('active');
+  };
+</script>
 </body></html>

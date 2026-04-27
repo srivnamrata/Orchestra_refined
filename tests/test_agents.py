@@ -10,6 +10,9 @@ from typing import List, Dict, Any
 from backend.agents.critic_agent import CriticAgent, RiskLevel, WorkflowIssue
 from backend.agents.orchestrator_agent import OrchestratorAgent
 from backend.services.knowledge_graph_service import KnowledgeGraphService
+from backend.agents.writer_agent import WriterAgent
+from backend.agents.coder_agent import CoderAgent
+from backend.agents.liaison_agent import LiaisonAgent
 from backend.services.llm_service import create_llm_service
 from backend.services.pubsub_service import create_pubsub_service
 
@@ -70,6 +73,53 @@ async def test_critic_detects_bottleneck(setup_services):
     
     print(f"✅ Bottleneck Detection Test Passed")
     print(f"   Issues found: {audit['total_issues_detected']}")
+
+
+@pytest.mark.asyncio
+async def test_writer_agent_execution(setup_services):
+    """Test that Writer Agent correctly formats document drafts."""
+    llm = setup_services["llm"]
+    agent = WriterAgent(llm)
+    
+    step = {"params": {"topic": "AI Strategy", "format": "markdown"}}
+    result = await agent.execute(step, {})
+    
+    assert result["status"] == "success"
+    assert "title" in result["data"]
+    assert "content" in result["data"]
+    print("✅ Writer Agent Test Passed")
+
+
+@pytest.mark.asyncio
+async def test_coder_agent_execution(setup_services):
+    """Test that Coder Agent provides code analysis and fixes."""
+    llm = setup_services["llm"]
+    agent = CoderAgent(llm)
+    
+    step = {"params": {"objective": "Refactor loop", "code": "for i in range(len(x)): print(x[i])"}}
+    result = await agent.execute(step, {})
+    
+    assert result["status"] == "success"
+    assert "suggested_fix" in result["data"]
+    assert "complexity_impact" in result["data"]
+    print("✅ Coder Agent Test Passed")
+
+
+@pytest.mark.asyncio
+async def test_liaison_agent_tone_fix(setup_services):
+    """Test that Liaison Agent successfully softens communication tone."""
+    llm = setup_services["llm"]
+    agent = LiaisonAgent(llm)
+    
+    # Liaison returns a direct JSON response, not wrapped in 'data' based on current implementation
+    step = {"params": {"text": "Do this now.", "recipient": "Team"}}
+    result = await agent.execute(step, {})
+    
+    # Handle potential implementation variance: Liaison returns JSON directly or via data key
+    res_data = result.get("data", result)
+    assert "revised" in res_data
+    assert len(res_data["tone_changes"]) > 0
+    print("✅ Liaison Agent Test Passed")
 
 
 @pytest.mark.asyncio

@@ -899,3 +899,21 @@ async def seed_demo_data():
         return {"status": "success", "message": "Demo data seeded successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/api/integrations/github", tags=["Integrations"])
+@router.post("/api/integrations/github")
+async def get_github_intel():
+    """Stub for GitHub intelligence data."""
+    return {"articles": [{"title": "PR #42: Vertex AI Integration", "source": "github", "status": "passed"}]}
+
+@router.get("/api/integrations/slack", tags=["Integrations"])
+@router.post("/api/integrations/slack")
+async def get_slack_intel():
+    """Stub for Slack intelligence data."""
+    return {"messages": [{"text": "Discussed API rate limits", "channel": "#eng"}]}
+
+@router.get("/api/integrations/email", tags=["Integrations"])
+@router.post("/api/integrations/email")
+async def get_email_intel():
+    """Stub for Email intelligence data."""
+    return {"emails": [{"subject": "Client feedback on Q1 report", "from": "client@example.com"}]}
