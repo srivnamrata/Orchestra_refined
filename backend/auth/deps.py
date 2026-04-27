@@ -22,6 +22,6 @@ async def get_current_user(x_session_token: str = Header(default="")):
 
 async def get_current_user_optional(x_session_token: str = Header(default="")):
     """Returns session dict if authenticated, None otherwise (for public-compatible routes)."""
-    if not x_session_token or state.redis_client is None:
+    if not x_session_token:
         return None
     return get_session(state.redis_client, x_session_token)
