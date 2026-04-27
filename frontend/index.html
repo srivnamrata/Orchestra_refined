@@ -2059,30 +2059,30 @@ html.dark .completion-toast { box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1p
   <!-- Nav -->
   <nav class="sidebar-nav">
     <div class="nav-label">Workspace</div>
-    <div class="nav-item active"><span class="ms">home</span> Dashboard</div>
-    <div class="nav-item"><span class="ms">bolt</span> Active Workflows <span class="nav-badge nb-blue">3</span></div>
-    <div class="nav-item" onclick="window.switchView('tasks')"><span class="ms">task_alt</span> All Tasks <span class="nav-badge nb-gray">24</span></div>
-    <div class="nav-item" onclick="window.switchView('outputs')"><span class="ms">folder_open</span> Outputs</div>
+    <div class="nav-item active" data-view="dashboard" onclick="window.switchView('dashboard')"><span class="ms">home</span> Dashboard</div>
+    <div class="nav-item" data-view="workflows" onclick="window.switchView('workflows')"><span class="ms">bolt</span> Active Workflows <span class="nav-badge nb-blue">3</span></div>
+    <div class="nav-item" data-view="tasks" onclick="window.switchView('tasks')"><span class="ms">task_alt</span> All Tasks <span class="nav-badge nb-gray">24</span></div>
+    <div class="nav-item" data-view="outputs" onclick="window.switchView('outputs')"><span class="ms">folder_open</span> Outputs</div>
     
     <div class="nav-label">Specialists</div>
-    <div class="nav-item" onclick="window.fetchIntel('news')"><span class="ms">newspaper</span> News Agent</div>
-    <div class="nav-item" onclick="window.fetchIntel('research')"><span class="ms">microscope</span> Research Agent</div>
-    <div class="nav-item" onclick="window.switchView('outputs')"><span class="ms">terminal</span> Coder Agent</div>
-    <div class="nav-item" onclick="window.switchView('outputs')"><span class="ms">edit_note</span> Writer Agent</div>
+    <div class="nav-item" data-view="news" onclick="window.switchView('dashboard'); window.fetchIntel('news')"><span class="ms">newspaper</span> News Agent</div>
+    <div class="nav-item" data-view="research" onclick="window.switchView('dashboard'); window.fetchIntel('research')"><span class="ms">microscope</span> Research Agent</div>
+    <div class="nav-item" data-view="outputs" onclick="window.switchView('outputs')"><span class="ms">terminal</span> Coder Agent</div>
+    <div class="nav-item" data-view="outputs" onclick="window.switchView('outputs')"><span class="ms">edit_note</span> Writer Agent</div>
 
     <div class="nav-label">System Monitoring</div>
-    <div class="nav-item" onclick="window.switchView('trace')" style="cursor:pointer"><span class="ms">psychology</span> Agent Reasoning</div>
-    <div class="nav-item" onclick="window.switchView('agents')"><span class="ms">hub</span> Agent Health <span class="nav-badge nb-green">4 live</span></div>
-    <div class="nav-item" onclick="window.switchView('debates')"><span class="ms">swords</span> Debates</div>
-    <div class="nav-item" onclick="window.switchView('settings')"><span class="ms">shield</span> Safety Audit</div>
+    <div class="nav-item" data-view="trace" onclick="window.switchView('trace')" style="cursor:pointer"><span class="ms">psychology</span> Agent Reasoning</div>
+    <div class="nav-item" data-view="agents" onclick="window.switchView('agents')"><span class="ms">hub</span> Agent Health <span class="nav-badge nb-green">4 live</span></div>
+    <div class="nav-item" data-view="debates" onclick="window.switchView('debates')"><span class="ms">swords</span> Debates</div>
+    <div class="nav-item" data-view="settings" onclick="window.switchView('settings')"><span class="ms">shield</span> Safety Audit</div>
     
     <div class="nav-label">Integrations</div>
-    <div class="nav-item" onclick="window.switchView('github')"><span class="ms">code</span> GitHub <span class="nav-badge nb-blue">stub</span></div>
-    <div class="nav-item" onclick="window.switchView('slack')"><span class="ms">forum</span> Slack <span class="nav-badge nb-blue">stub</span></div>
-    <div class="nav-item" onclick="window.switchView('email')"><span class="ms">mail</span> Email <span class="nav-badge nb-blue">stub</span></div>
-    <div class="nav-item" onclick="window.switchView('discovery')"><span class="ms">dynamic_form</span> Discovery Lab <span class="nav-badge nb-violet">MCP</span></div>
-    <div class="nav-item" onclick="window.switchView('library')"><span class="ms">auto_stories</span> Veda <span class="nav-badge nb-violet">Library</span></div>
-    <div class="nav-item" onclick="window.switchView('guru')"><span class="ms">self_improvement</span> Param Mitra <span class="nav-badge nb-amber">GURU</span></div>
+    <div class="nav-item" data-view="github" onclick="window.switchView('dashboard'); window.fetchIntel('github')"><span class="ms">code</span> GitHub <span class="nav-badge nb-blue">stub</span></div>
+    <div class="nav-item" data-view="slack" onclick="window.switchView('dashboard'); window.fetchIntel('slack')"><span class="ms">forum</span> Slack <span class="nav-badge nb-blue">stub</span></div>
+    <div class="nav-item" data-view="email" onclick="window.switchView('dashboard'); window.fetchIntel('email')"><span class="ms">mail</span> Email <span class="nav-badge nb-blue">stub</span></div>
+    <div class="nav-item" data-view="discovery" onclick="window.switchView('discovery')"><span class="ms">dynamic_form</span> Discovery Lab <span class="nav-badge nb-violet">MCP</span></div>
+    <div class="nav-item" data-view="library" onclick="window.switchView('library')"><span class="ms">auto_stories</span> Veda <span class="nav-badge nb-violet">Library</span></div>
+    <div class="nav-item" data-view="guru" onclick="window.switchView('guru')"><span class="ms">self_improvement</span> Param Mitra <span class="nav-badge nb-amber">GURU</span></div>
   </nav>
 
   <!-- Quick Actions -->
@@ -2868,15 +2868,27 @@ html.dark .completion-toast { box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1p
     const target = document.getElementById(viewId);
     if (target) {
         target.classList.add('active');
-        document.querySelector('.page-title').textContent = viewId.charAt(0).toUpperCase() + viewId.slice(1);
+        const titleEl = document.querySelector('.page-title');
+        if (titleEl) {
+           const label = viewId.replace(/-/g, ' ');
+           titleEl.textContent = label.charAt(0).toUpperCase() + label.slice(1);
+        }
     }
     document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-    const navItem = Array.from(document.querySelectorAll('.nav-item')).find(i => i.textContent.toLowerCase().includes(viewId.toLowerCase()));
+    // Priority 1: Match by data-view attribute
+    let navItem = document.querySelector(`.nav-item[data-view="${viewId}"]`);
+    // Priority 2: Fallback to text matching if data-view isn't present
+    if (!navItem) {
+        navItem = Array.from(document.querySelectorAll('.nav-item')).find(i => i.textContent.toLowerCase().includes(viewId.toLowerCase()));
+    }
     if (navItem) navItem.classList.add('active');
   };
   window.fetchIntel = window.fetchIntel || function(type, btn) {
+    if (!type) return;
     document.querySelectorAll('.intel-tab').forEach(t => t.classList.remove('active'));
-    if(btn) btn.classList.add('active');
+    const tab = Array.from(document.querySelectorAll('.intel-tab')).find(t => t.textContent.toLowerCase().includes(type.toLowerCase()));
+    if(tab) tab.classList.add('active');
+
     document.querySelectorAll('.intel-pane').forEach(p => p.classList.remove('active'));
     const pane = document.getElementById('pane-' + type);
     if(pane) pane.classList.add('active');
