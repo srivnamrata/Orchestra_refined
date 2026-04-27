@@ -14,19 +14,6 @@ export function initUI() {
     const saved = localStorage.getItem('orchestra-theme');
     applyTheme(saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches));
 
-    document.querySelectorAll('.sidebar-nav .nav-item').forEach(item => {
-        item.addEventListener('click', () => {
-            const text = item.textContent.trim().toLowerCase();
-            if      (text.includes('home'))             switchView('dashboard');
-            else if (text.includes('active workflow'))  switchView('workflows');
-            else if (text.includes('all task'))         switchView('tasks');
-            else if (text.includes('output'))           switchView('outputs');
-            else if (text.includes('agent reasoning'))  switchView('trace');
-            else if (text.includes('vibe'))             switchView('vibe-checks');
-            else if (text.includes('debate'))           switchView('debates');
-            else if (text.includes('setting') || text.includes('safety')) switchView('settings');
-        });
-    });
 
     const content = document.querySelector('.content');
     if (content && !document.getElementById('back-dash-bar')) {

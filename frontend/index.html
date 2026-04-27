@@ -2067,8 +2067,8 @@ html.dark .completion-toast { box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1p
     <div class="nav-label">Specialists</div>
     <div class="nav-item" data-view="news" onclick="window.switchSpecialist('news')"><span class="ms">newspaper</span> News</div>
     <div class="nav-item" data-view="research" onclick="window.switchSpecialist('research')"><span class="ms">science</span> Research</div>
-    <div class="nav-item" data-view="coder" onclick="window.switchView('outputs')"><span class="ms">terminal</span> Coder</div>
-    <div class="nav-item" data-view="writer" onclick="window.switchView('outputs')"><span class="ms">edit_note</span> Writer</div>
+    <div class="nav-item" data-view="coder" onclick="window.switchView('coder')"><span class="ms">terminal</span> Coder</div>
+    <div class="nav-item" data-view="writer" onclick="window.switchView('writer')"><span class="ms">edit_note</span> Writer</div>
 
     <div class="nav-label">System Monitoring</div>
     <div class="nav-item" data-view="trace" onclick="window.switchView('trace')" style="cursor:pointer"><span class="ms">psychology</span> Agent Reasoning</div>
@@ -2090,6 +2090,7 @@ html.dark .completion-toast { box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1p
     <div class="sa-label">Quick Actions</div>
     <button class="sa-btn" onclick="runDemo('critic')"><span class="ms">manage_search</span> Critic Replan</button>
     <button class="sa-btn" onclick="runDemo('scan')"><span class="ms">radar</span> Run Scan</button>
+    <button class="sa-btn" onclick="runDemo('vibe')"><span class="ms">verified_user</span> Vibe Check</button>
   </div>
 
   <!-- User -->
@@ -2789,6 +2790,36 @@ html.dark .completion-toast { box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1p
       </div>
     </div>
 
+    <div id="coder" class="view">
+      <div class="workflows-container" style="padding:24px">
+        <div class="view-header" style="margin-bottom:24px">
+          <h2 style="color:var(--md-on-surface)">💻 Coder Agent</h2>
+          <p style="color:var(--md-dim)">Code generation, review, and project scaffolding by the Coder specialist.</p>
+        </div>
+        <div id="coder-outputs-list" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap:16px;">
+           <div class="empty-state" style="padding:40px; text-align:center; background:var(--md-surface-1); border-radius:16px; grid-column:1/-1">
+              <div class="ms" style="font-size:48px; color:var(--md-dim); margin-bottom:12px">terminal</div>
+              <p style="color:var(--md-dim)">No code outputs yet. Submit a coding goal to get started.</p>
+           </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="writer" class="view">
+      <div class="workflows-container" style="padding:24px">
+        <div class="view-header" style="margin-bottom:24px">
+          <h2 style="color:var(--md-on-surface)">✍️ Writer Agent</h2>
+          <p style="color:var(--md-dim)">Content creation, editing, and document generation by the Writer specialist.</p>
+        </div>
+        <div id="writer-outputs-list" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap:16px;">
+           <div class="empty-state" style="padding:40px; text-align:center; background:var(--md-surface-1); border-radius:16px; grid-column:1/-1">
+              <div class="ms" style="font-size:48px; color:var(--md-dim); margin-bottom:12px">edit_note</div>
+              <p style="color:var(--md-dim)">No written outputs yet. Submit a writing goal to get started.</p>
+           </div>
+        </div>
+      </div>
+    </div>
+
     <div id="settings" class="view">
       <div style="padding:40px; text-align:center">
         <div class="ms" style="font-size:48px; color:var(--md-dim); margin-bottom:20px">settings</div>
@@ -2884,19 +2915,15 @@ html.dark .completion-toast { box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1p
     if (navItem) navItem.classList.add('active');
   };
   window.switchSpecialist = function(type) {
-    // Ensure we are on the dashboard view
     window.switchView('dashboard');
-    // Force highlight of the specialist agent in sidebar
     document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
     const item = document.querySelector(`.nav-item[data-view="${type}"]`);
     if(item) item.classList.add('active');
-    
-    // Update Intelligence panel pane
-    if(window.fetchIntel) {
-      window.fetchIntel(type);
-    }
+    if(window.fetchIntel) window.fetchIntel(type);
     const titleEl = document.querySelector('.page-title');
     if (titleEl) titleEl.textContent = type.charAt(0).toUpperCase() + type.slice(1);
+    const intel = document.querySelector('.intel-panel');
+    if (intel) intel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   };
 
   window.fetchIntel = window.fetchIntel || function(type, btn) {
