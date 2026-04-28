@@ -136,15 +136,15 @@ export function renderStatusOverview(data) {
     if (!feed) return;
 
     const t = data.totals || {};
-    const prioColor = { critical:'var(--g-red)', high:'var(--g-amber)', medium:'var(--g-blue)', low:'var(--md-dim)' };
-    const prioBg    = { critical:'var(--g-red-light)', high:'var(--g-amber-light)', medium:'var(--g-blue-light)', low:'var(--md-surface-2)' };
+    const prioColor = { critical:'var(--g-red)', high:'var(--g-amber)', medium:'var(--g-blue)', low:'#64748b' };
+    const prioBg    = { critical:'var(--g-red-light)', high:'var(--g-amber-light)', medium:'var(--g-blue-light)', low:'rgba(100,116,139,0.12)' };
 
     const taskRow = (task) => `
         <div style="display:flex;flex-direction:column;padding:6px 0;border-bottom:1px solid var(--md-surface-2);gap:3px">
             <div style="display:flex;align-items:center;gap:8px">
                 <span style="width:6px;height:6px;border-radius:50%;background:${prioColor[task.priority]||'var(--md-dim)'};flex-shrink:0"></span>
                 <span style="flex:1;font-size:12px;color:var(--md-on-surface)">${task.title}</span>
-                <span style="font-size:10px;padding:1px 6px;border-radius:100px;background:${prioBg[task.priority]||'var(--md-surface-2)'};color:${prioColor[task.priority]||'var(--md-dim)'}">${task.priority}</span>
+                <span style="font-size:10px;padding:1px 6px;border-radius:100px;background:${prioBg[task.priority]||'rgba(100,116,139,0.12)'};color:${prioColor[task.priority]||'#64748b'}">${task.priority}</span>
             </div>
             ${_agentBadge(task) ? `<div style="padding-left:14px">${_agentBadge(task)}</div>` : ''}
         </div>`;
@@ -357,8 +357,8 @@ function _agentBadge(t) {
 }
 
 export function renderTasks(tasks) {
-    const prioColor = { critical:'var(--g-red)', high:'var(--g-amber)', medium:'var(--g-blue)', low:'var(--md-dim)' };
-    const prioBg    = { critical:'var(--g-red-light)', high:'var(--g-amber-light)', medium:'var(--g-blue-light)', low:'var(--md-surface-2)' };
+    const prioColor = { critical:'var(--g-red)', high:'var(--g-amber)', medium:'var(--g-blue)', low:'#64748b' };
+    const prioBg    = { critical:'var(--g-red-light)', high:'var(--g-amber-light)', medium:'var(--g-blue-light)', low:'rgba(100,116,139,0.12)' };
     const html = (tasks||[]).slice(0,8).map(t => {
         const done  = t.status === 'completed' || t.status === 'done';
         const p     = (t.priority||'medium').toLowerCase();
@@ -368,7 +368,7 @@ export function renderTasks(tasks) {
             <div class="ti-check ${done?'done':''}" style="cursor:default">${done?'✓':''}</div>
             <div><div class="ti-title ${done?'done-text':''}">${t.title}</div>
             <div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap;align-items:center">
-                <span class="ti-priority" style="background:${prioBg[p]||'var(--md-surface-2)'};color:${prioColor[p]||'var(--md-dim)'}">${p}</span>
+                <span class="ti-priority" style="background:${prioBg[p]||'rgba(100,116,139,0.12)'};color:${prioColor[p]||'#64748b'}">${p}</span>
                 ${due?`<span class="ti-due">${due}</span>`:''}
                 ${badge}
             </div></div>
