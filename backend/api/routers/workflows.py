@@ -133,6 +133,173 @@ def _parse_datetime_from_goal(goal: str, params: dict) -> Tuple[datetime, int]:
     return event_start, duration
 
 
+_STATUS_KEYWORDS = [
+    "status", "overview", "summary", "show me", "what's", "whats",
+    "how are", "where are", "list", "tell me", "give me", "project status",
+    "what do i", "progress", "pending", "open tasks", "my tasks",
+    "what should i", "what is due", "overdue", "behind",
+]
+
+def _is_status_goal(goal: str) -> bool:
+    """True when the user wants to READ/summarise existing data, not create new items."""
+    g = goal.lower()
+    return any(kw in g for kw in _STATUS_KEYWORDS)
+
+
+async def _stream_status_overview(
+    goal: str, priority: str, workflow_id: str, user_id=None
+) -> AsyncGenerator[str, None]:
+    """
+    Dedicated path for read/summarise goals.
+    Fetches real tasks + events from DB, runs CriticAgent analysis,
+    and emits a render-status SSE widget.
+    """
+    from backend.database import get_all_tasks, get_all_events, get_upcoming_events
+    from datetime import timezone
+
+    ts   = lambda: datetime.now().strftime("%H:%M:%S")
+    now  = datetime.utcnow()
+
+    def think(agent, role, message, thought_type="thought"):
+        state.emit_thought(agent, role, message, thought_type)
+        type_map = {"thought": "thinking", "dialogue": "info",
+                    "finding": "info", "action": "info",
+                    "alert": "error", "result": "success"}
+        return _sse("activity", {
+            "type":      type_map.get(thought_type, "info"),
+            "category":  "analysis",
+            "message":   f'<span class="trace-{agent}">[{role}]</span> {message}',
+            "timestamp": ts(),
+        })
+
+    yield think("orchestrator", "Orchestrator",
+        f'Goal classified as <strong>READ / SUMMARISE</strong> — fetching live data instead of creating items.',
+        "thought")
+    await asyncio.sleep(0.15)
+
+    # ── TaskAgent: fetch all tasks ────────────────────────────────────────────
+    yield think("task", "Task Agent",
+        "Querying database for all tasks — grouping by status and priority…", "action")
+    await asyncio.sleep(0.2)
+
+    all_tasks = get_all_tasks(limit=200, user_id=user_id)
+
+    overdue     = [t for t in all_tasks if t.due_date and t.due_date < now and t.status not in ("completed",)]
+    in_progress = [t for t in all_tasks if t.status == "in_progress"]
+    open_tasks  = [t for t in all_tasks if t.status == "open"]
+    completed   = [t for t in all_tasks if t.status == "completed"
+                   and t.completed_at and (now - t.completed_at).days <= 7]
+    critical    = [t for t in all_tasks if t.priority == "critical" and t.status != "completed"]
+
+    yield think("task", "Task Agent",
+        f"Found: {len(overdue)} overdue · {len(in_progress)} in progress · "
+        f"{len(open_tasks)} open · {len(completed)} completed this week · "
+        f"{len(critical)} critical open.",
+        "result")
+    await asyncio.sleep(0.2)
+
+    # ── SchedulerAgent: fetch upcoming events ─────────────────────────────────
+    yield think("scheduler", "Scheduler Agent",
+        "Fetching calendar events for the next 7 days…", "action")
+    await asyncio.sleep(0.2)
+
+    upcoming = get_upcoming_events(days_ahead=7)
+    if user_id is not None:
+        upcoming = [e for e in upcoming if e.user_id == user_id or e.user_id is None]
+
+    today_events = [e for e in upcoming if e.start_time and e.start_time.date() == now.date()]
+    yield think("scheduler", "Scheduler Agent",
+        f"Found {len(upcoming)} upcoming events — {len(today_events)} today.", "result")
+    await asyncio.sleep(0.15)
+
+    # ── CriticAgent: analyse for risks ────────────────────────────────────────
+    yield think("critic", "Critic Agent",
+        "Analysing task + calendar data for risks, bottlenecks, and priority conflicts…", "dialogue")
+    await asyncio.sleep(0.25)
+
+    insights = []
+    if overdue:
+        insights.append({
+            "level": "high",
+            "icon":  "⚠️",
+            "text":  f"{len(overdue)} task{'s' if len(overdue)>1 else ''} overdue — "
+                     f"most critical: <strong>{overdue[0].title}</strong>",
+        })
+    if critical:
+        insights.append({
+            "level": "high",
+            "icon":  "🔴",
+            "text":  f"{len(critical)} critical task{'s' if len(critical)>1 else ''} still open",
+        })
+    # Check if any upcoming event has unfinished blocking tasks
+    for ev in upcoming[:5]:
+        ev_date = ev.start_time.date() if ev.start_time else None
+        if ev_date:
+            blocking = [t for t in in_progress + open_tasks
+                        if t.due_date and t.due_date.date() >= ev_date]
+            if blocking:
+                insights.append({
+                    "level": "medium",
+                    "icon":  "📅",
+                    "text":  f'<strong>{ev.title}</strong> on {ev_date.strftime("%b %d")} — '
+                             f"{len(blocking)} task{'s' if len(blocking)>1 else ''} still open before it",
+                })
+                break
+    if not insights:
+        insights.append({
+            "level": "low",
+            "icon":  "✅",
+            "text":  "No critical risks detected — project health looks good.",
+        })
+
+    yield think("critic", "Critic Agent",
+        f"Analysis complete: {len(insights)} insight{'s' if len(insights)>1 else ''} surfaced.", "finding")
+    await asyncio.sleep(0.15)
+
+    # ── Emit the render-status widget ─────────────────────────────────────────
+    def _task_json(t):
+        return {
+            "id":       t.task_id,
+            "title":    t.title,
+            "priority": t.priority,
+            "status":   t.status,
+            "due_date": t.due_date.strftime("%b %d") if t.due_date else None,
+        }
+
+    def _event_json(e):
+        return {
+            "id":       e.event_id,
+            "title":    e.title,
+            "start":    e.start_time.strftime("%b %d %H:%M") if e.start_time else None,
+            "location": e.location or "",
+        }
+
+    yield _sse("render-status", {
+        "goal":        goal,
+        "generated":   ts(),
+        "totals": {
+            "overdue":     len(overdue),
+            "in_progress": len(in_progress),
+            "open":        len(open_tasks),
+            "completed":   len(completed),
+            "critical":    len(critical),
+        },
+        "overdue":     [_task_json(t) for t in overdue[:5]],
+        "in_progress": [_task_json(t) for t in in_progress[:5]],
+        "open":        [_task_json(t) for t in open_tasks[:5]],
+        "completed":   [_task_json(t) for t in completed[:4]],
+        "upcoming":    [_event_json(e) for e in upcoming[:6]],
+        "insights":    insights,
+    })
+
+    yield _sse("done", {
+        "workflow_id":      workflow_id,
+        "steps":            3,
+        "tasks_created":    0,
+        "events_scheduled": 0,
+    })
+
+
 def _heuristic_plan(goal: str, priority: str, now: datetime) -> list:
     """Goal-aware fallback plan used when Gemini is unavailable."""
     g        = goal.lower()
@@ -397,6 +564,7 @@ Respond ONLY with a valid JSON array, no markdown fences:
                     priority=params.get("priority", priority),
                     due_date=task_due,
                     source="orchestrator",
+                    user_id=user_id,
                 )
                 results.append({"type": "task", "id": result.task_id, "title": result.title})
                 yield think("task", "Task Agent",
@@ -475,6 +643,7 @@ Respond ONLY with a valid JSON array, no markdown fences:
                         end_time=event_start + timedelta(minutes=duration),
                         description=detail,
                         source="orchestrator",
+                        user_id=user_id,
                     )
                     results.append({"type": "event", "id": result.event_id, "title": result.title})
                     yield think("scheduler", "Scheduler Agent",
@@ -809,8 +978,17 @@ async def orchestrate_stream(request: OrchestrateRequest, user=Depends(get_curre
     workflow_id = str(uuid.uuid4())[:8]
     user_id     = user["user_id"] if user else None
     logger.info(f"🌊 Streaming orchestration {workflow_id}: {request.goal} (user={user_id})")
+
+    # Route read/summarise goals to the dedicated status handler
+    if _is_status_goal(request.goal):
+        generator = _stream_status_overview(
+            request.goal, request.priority, workflow_id, user_id=user_id)
+    else:
+        generator = _stream_orchestration(
+            request.goal, request.priority, workflow_id, user_id=user_id)
+
     return StreamingResponse(
-        _stream_orchestration(request.goal, request.priority, workflow_id, user_id=user_id),
+        generator,
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )

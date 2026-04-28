@@ -93,15 +93,15 @@ async def lifespan(app: FastAPI):
         state.knowledge_graph, state.pubsub_service,
     )
 
-    class MockGenericAgent:
-        async def execute(self, step, prev): return {"status": "mock_success"}
+    from backend.agents.task_agent import TaskAgent
+    from backend.agents.knowledge_agent import KnowledgeAgent
 
     state.orchestrator.register_sub_agent("scheduler", SchedulerAgent(state.llm_service))
     state.orchestrator.register_sub_agent("librarian", state.veda_librarian)
     state.orchestrator.register_sub_agent("guru",      state.param_mitra)
     state.orchestrator.register_sub_agent("research",  ResearchAgent(state.knowledge_graph))
-    state.orchestrator.register_sub_agent("task",      MockGenericAgent())
-    state.orchestrator.register_sub_agent("knowledge", MockGenericAgent())
+    state.orchestrator.register_sub_agent("task",      TaskAgent(state.knowledge_graph))
+    state.orchestrator.register_sub_agent("knowledge", KnowledgeAgent(state.knowledge_graph))
     state.orchestrator.register_sub_agent("news",      NewsAgent(state.knowledge_graph))
 
     state.debate_engine = MultiAgentDebateEngine({

@@ -1,5 +1,94 @@
 // Pure DOM-rendering functions — no external module imports.
 
+export function renderStatusOverview(data) {
+    const feed = document.getElementById('feed');
+    if (!feed) return;
+
+    const t = data.totals || {};
+    const prioColor = { critical:'var(--g-red)', high:'var(--g-amber)', medium:'var(--g-blue)', low:'var(--md-dim)' };
+    const prioBg    = { critical:'var(--g-red-light)', high:'var(--g-amber-light)', medium:'var(--g-blue-light)', low:'var(--md-surface-2)' };
+
+    const taskRow = (task) => `
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--md-surface-2)">
+            <span style="width:6px;height:6px;border-radius:50%;background:${prioColor[task.priority]||'var(--md-dim)'};flex-shrink:0"></span>
+            <span style="flex:1;font-size:12px;color:var(--md-on-surface)">${task.title}</span>
+            ${task.due_date ? `<span style="font-size:10px;color:var(--md-dim);font-family:var(--font-mono)">${task.due_date}</span>` : ''}
+            <span style="font-size:10px;padding:1px 6px;border-radius:100px;background:${prioBg[task.priority]||'var(--md-surface-2)'};color:${prioColor[task.priority]||'var(--md-dim)'}">${task.priority}</span>
+        </div>`;
+
+    const eventRow = (ev) => `
+        <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--md-surface-2)">
+            <span class="ms" style="font-size:14px;color:var(--g-blue)">event</span>
+            <span style="flex:1;font-size:12px;color:var(--md-on-surface)">${ev.title}</span>
+            <span style="font-size:10px;color:var(--md-dim);font-family:var(--font-mono)">${ev.start||''}</span>
+        </div>`;
+
+    const insightRow = (ins) => {
+        const bg = ins.level==='high' ? 'rgba(234,67,53,0.08)' : ins.level==='medium' ? 'rgba(251,188,4,0.08)' : 'rgba(52,168,83,0.08)';
+        const border = ins.level==='high' ? 'var(--g-red)' : ins.level==='medium' ? 'var(--g-amber)' : 'var(--g-green)';
+        return `<div style="padding:7px 10px;border-left:3px solid ${border};background:${bg};border-radius:0 6px 6px 0;font-size:12px;color:var(--md-on-surface);margin-bottom:6px">${ins.icon} ${ins.text}</div>`;
+    };
+
+    const card = document.createElement('div');
+    card.className = 'run-card';
+    card.style.cssText = 'margin:8px 0;border-top:3px solid var(--g-blue-mid)';
+    card.innerHTML = `
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+            <span class="ms" style="color:var(--g-blue)">dashboard</span>
+            <div style="font-weight:700;font-size:13px;flex:1">Project Status Overview</div>
+            <span style="font-size:10px;color:var(--md-dim);font-family:var(--font-mono)">${data.generated||''}</span>
+        </div>
+
+        <!-- Totals row -->
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:16px">
+            ${[
+                {label:'Overdue',     val:t.overdue||0,     color:'var(--g-red)',   bg:'var(--g-red-light)'},
+                {label:'In Progress', val:t.in_progress||0, color:'var(--g-blue)',  bg:'var(--g-blue-light)'},
+                {label:'Open',        val:t.open||0,        color:'var(--g-amber)', bg:'var(--g-amber-light)'},
+                {label:'Done (7d)',   val:t.completed||0,   color:'var(--g-green)', bg:'var(--g-green-light)'},
+                {label:'Critical',    val:t.critical||0,    color:'var(--g-red)',   bg:'var(--g-red-light)'},
+            ].map(s => `
+                <div style="text-align:center;padding:8px 4px;border-radius:10px;background:${s.bg}">
+                    <div style="font-size:22px;font-weight:800;color:${s.color}">${s.val}</div>
+                    <div style="font-size:9px;color:${s.color};font-weight:600;letter-spacing:.3px">${s.label.toUpperCase()}</div>
+                </div>`).join('')}
+        </div>
+
+        <!-- Critic insights -->
+        <div style="margin-bottom:14px">
+            <div style="font-size:10px;font-weight:700;color:var(--md-dim);letter-spacing:.5px;margin-bottom:6px">CRITIC AGENT INSIGHTS</div>
+            ${(data.insights||[]).map(insightRow).join('')}
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+            <!-- Overdue / In Progress -->
+            <div>
+                ${(data.overdue||[]).length ? `
+                <div style="font-size:10px;font-weight:700;color:var(--g-red);letter-spacing:.5px;margin-bottom:4px">⚠ OVERDUE</div>
+                ${(data.overdue||[]).map(taskRow).join('')}` : ''}
+                ${(data.in_progress||[]).length ? `
+                <div style="font-size:10px;font-weight:700;color:var(--g-blue);letter-spacing:.5px;margin:10px 0 4px">IN PROGRESS</div>
+                ${(data.in_progress||[]).map(taskRow).join('')}` : ''}
+                ${(data.open||[]).length ? `
+                <div style="font-size:10px;font-weight:700;color:var(--md-dim);letter-spacing:.5px;margin:10px 0 4px">OPEN</div>
+                ${(data.open||[]).map(taskRow).join('')}` : ''}
+            </div>
+
+            <!-- Upcoming events + completed -->
+            <div>
+                ${(data.upcoming||[]).length ? `
+                <div style="font-size:10px;font-weight:700;color:var(--g-blue);letter-spacing:.5px;margin-bottom:4px">UPCOMING (7 DAYS)</div>
+                ${(data.upcoming||[]).map(eventRow).join('')}` : ''}
+                ${(data.completed||[]).length ? `
+                <div style="font-size:10px;font-weight:700;color:var(--g-green);letter-spacing:.5px;margin:10px 0 4px">COMPLETED THIS WEEK</div>
+                ${(data.completed||[]).map(taskRow).join('')}` : ''}
+            </div>
+        </div>`;
+
+    // Prepend into the activity feed so it appears at the top (newest first)
+    feed.prepend(card);
+}
+
 export function renderVibeCheck(data) {
     const list = document.getElementById('vibe-check-results');
     if (!list) return;
