@@ -475,11 +475,77 @@ async def _stream_status_overview(
     yield think("orchestrator", "Orchestrator",
         f'Goal classified as <strong>READ / SUMMARISE</strong> — fetching live data instead of creating items.',
         "thought")
+    yield _sse("workflow-state", {
+        "workflow_id": workflow_id,
+        "goal": goal,
+        "status": "planning",
+        "progress": 10,
+        "plan_revision": 0,
+        "message": "Orchestrator is assembling the status workflow.",
+    })
+    yield _sse("workflow-plan", {
+        "workflow_id": workflow_id,
+        "goal": goal,
+        "priority": priority,
+        "status": "planning",
+        "plan_revision": 0,
+        "total_steps": 4,
+        "parallel_groups": [[1, 2]],
+        "message": "Status workflow planned: data fetches in parallel, then Critic synthesis.",
+        "steps": [
+            {
+                "step_id": 0,
+                "sequence_index": 1,
+                "name": "Goal classification",
+                "agent": "orchestrator",
+                "detail": "Determine which live data sources matter for this request.",
+                "params": {},
+                "status": "executing",
+            },
+            {
+                "step_id": 1,
+                "sequence_index": 2,
+                "name": "Task analysis",
+                "agent": "task",
+                "detail": "Fetch open, overdue, and completed tasks from the workspace.",
+                "params": {},
+                "status": "pending",
+            },
+            {
+                "step_id": 2,
+                "sequence_index": 3,
+                "name": "Calendar analysis",
+                "agent": "scheduler",
+                "detail": "Fetch upcoming calendar events for the next 7 days.",
+                "params": {},
+                "status": "pending",
+            },
+            {
+                "step_id": 3,
+                "sequence_index": 4,
+                "name": "Critic synthesis",
+                "agent": "critic",
+                "detail": "Merge the data into an insight-rich status overview.",
+                "params": {},
+                "status": "pending",
+            },
+        ],
+    })
     await asyncio.sleep(0.15)
 
     # ── TaskAgent: fetch all tasks ────────────────────────────────────────────
     yield think("task", "Task Agent",
         "Querying database for all tasks — grouping by status and priority…", "action")
+    yield _sse("workflow-step", {
+        "workflow_id": workflow_id,
+        "step_id": 1,
+        "sequence_index": 2,
+        "step_name": "Task analysis",
+        "agent": "task",
+        "status": "starting",
+        "plan_revision": 0,
+        "message": "Task Agent preparing: Task analysis",
+    })
     await asyncio.sleep(0.2)
 
     all_tasks = get_all_tasks(limit=200, user_id=user_id)
@@ -496,11 +562,40 @@ async def _stream_status_overview(
         f"{len(open_tasks)} open · {len(completed)} completed this week · "
         f"{len(critical)} critical open.",
         "result")
+    yield _sse("workflow-step", {
+        "workflow_id": workflow_id,
+        "step_id": 1,
+        "sequence_index": 2,
+        "step_name": "Task analysis",
+        "agent": "task",
+        "status": "completed",
+        "plan_revision": 0,
+        "result_summary": f"{len(all_tasks)} tasks analysed",
+        "message": f"{len(all_tasks)} tasks analysed",
+    })
+    yield _sse("workflow-state", {
+        "workflow_id": workflow_id,
+        "goal": goal,
+        "status": "planning",
+        "progress": 40,
+        "plan_revision": 0,
+        "message": "Task analysis complete. Fetching calendar data in parallel.",
+    })
     await asyncio.sleep(0.2)
 
     # ── SchedulerAgent: fetch upcoming events ─────────────────────────────────
     yield think("scheduler", "Scheduler Agent",
         "Fetching calendar events for the next 7 days…", "action")
+    yield _sse("workflow-step", {
+        "workflow_id": workflow_id,
+        "step_id": 2,
+        "sequence_index": 3,
+        "step_name": "Calendar analysis",
+        "agent": "scheduler",
+        "status": "starting",
+        "plan_revision": 0,
+        "message": "Scheduler Agent preparing: Calendar analysis",
+    })
     await asyncio.sleep(0.2)
 
     upcoming = get_upcoming_events(days_ahead=7)
@@ -510,11 +605,40 @@ async def _stream_status_overview(
     today_events = [e for e in upcoming if e.start_time and e.start_time.date() == now.date()]
     yield think("scheduler", "Scheduler Agent",
         f"Found {len(upcoming)} upcoming events — {len(today_events)} today.", "result")
+    yield _sse("workflow-step", {
+        "workflow_id": workflow_id,
+        "step_id": 2,
+        "sequence_index": 3,
+        "step_name": "Calendar analysis",
+        "agent": "scheduler",
+        "status": "completed",
+        "plan_revision": 0,
+        "result_summary": f"{len(upcoming)} events analysed",
+        "message": f"{len(upcoming)} events analysed",
+    })
+    yield _sse("workflow-state", {
+        "workflow_id": workflow_id,
+        "goal": goal,
+        "status": "planning",
+        "progress": 65,
+        "plan_revision": 0,
+        "message": "Calendar analysis complete. Critic is synthesizing the final status view.",
+    })
     await asyncio.sleep(0.15)
 
     # ── CriticAgent: analyse for risks ────────────────────────────────────────
     yield think("critic", "Critic Agent",
         "Analysing task + calendar data for risks, bottlenecks, and priority conflicts…", "dialogue")
+    yield _sse("workflow-step", {
+        "workflow_id": workflow_id,
+        "step_id": 3,
+        "sequence_index": 4,
+        "step_name": "Critic synthesis",
+        "agent": "critic",
+        "status": "starting",
+        "plan_revision": 0,
+        "message": "Critic Agent preparing: Critic synthesis",
+    })
     await asyncio.sleep(0.25)
 
     insights = []
@@ -554,6 +678,17 @@ async def _stream_status_overview(
 
     yield think("critic", "Critic Agent",
         f"Analysis complete: {len(insights)} insight{'s' if len(insights)>1 else ''} surfaced.", "finding")
+    yield _sse("workflow-step", {
+        "workflow_id": workflow_id,
+        "step_id": 3,
+        "sequence_index": 4,
+        "step_name": "Critic synthesis",
+        "agent": "critic",
+        "status": "completed",
+        "plan_revision": 0,
+        "result_summary": f"{len(insights)} insights surfaced",
+        "message": f"{len(insights)} insights surfaced",
+    })
     await asyncio.sleep(0.15)
 
     # ── Emit the render-status widget ─────────────────────────────────────────
@@ -590,6 +725,14 @@ async def _stream_status_overview(
         "completed":   [_task_json(t) for t in completed[:4]],
         "upcoming":    [_event_json(e) for e in upcoming[:6]],
         "insights":    insights,
+    })
+    yield _sse("workflow-state", {
+        "workflow_id": workflow_id,
+        "goal": goal,
+        "status": "completed",
+        "progress": 100,
+        "plan_revision": 0,
+        "message": "Status overview complete.",
     })
 
     yield _sse("done", {
@@ -746,6 +889,54 @@ async def _stream_orchestration(goal: str, priority: str, workflow_id: str, user
         "plan_revision": 0,
         "message": "Preparing execution plan…",
     })
+    yield _sse("workflow-plan", {
+        "workflow_id": workflow_id,
+        "goal": goal,
+        "priority": priority,
+        "status": "planning",
+        "plan_revision": 0,
+        "total_steps": 4,
+        "parallel_groups": [],
+        "message": "Orchestrator is drafting the execution graph.",
+        "steps": [
+            {
+                "step_id": -1,
+                "sequence_index": 1,
+                "name": "Goal intake",
+                "agent": "orchestrator",
+                "detail": "Parse the user goal, constraints, and desired outcome.",
+                "params": {},
+                "status": "executing",
+            },
+            {
+                "step_id": -2,
+                "sequence_index": 2,
+                "name": "Plan synthesis",
+                "agent": "planner",
+                "detail": "Draft a safe, minimal execution path.",
+                "params": {},
+                "status": "pending",
+            },
+            {
+                "step_id": -3,
+                "sequence_index": 3,
+                "name": "Critic review",
+                "agent": "critic",
+                "detail": "Check dependencies, bottlenecks, and goal drift.",
+                "params": {},
+                "status": "pending",
+            },
+            {
+                "step_id": -4,
+                "sequence_index": 4,
+                "name": "Execution dispatch",
+                "agent": "executor",
+                "detail": "Launch the first concrete agent step.",
+                "params": {},
+                "status": "pending",
+            },
+        ],
+    })
     await asyncio.sleep(0.2)
 
     # ── 2. Orchestrator → LLM: decompose ─────────────────────────────────────
@@ -800,6 +991,14 @@ Respond ONLY with a valid JSON array, no markdown fences:
             f"Gemini unavailable ({str(e)[:60]}). Building goal-aware fallback plan.",
             "alert")
         steps = _heuristic_plan(goal, priority, datetime.now())
+    yield _sse("workflow-state", {
+        "workflow_id": workflow_id,
+        "goal": goal,
+        "status": "planning",
+        "progress": 35,
+        "plan_revision": 0,
+        "message": f"Planner draft ready with {len(steps)} candidate step{'' if len(steps) == 1 else 's'}.",
+    })
     await asyncio.sleep(0.15)
 
     # ── 3. Critic reviews the plan ────────────────────────────────────────────
@@ -890,6 +1089,14 @@ Respond ONLY with a valid JSON array, no markdown fences:
             "recommendation": "Approved for execution — all 5 vibe checks passed.",
             "timestamp": ts(),
         })
+    yield _sse("workflow-state", {
+        "workflow_id": workflow_id,
+        "goal": goal,
+        "status": "planning" if has_sched and not has_task else "executing",
+        "progress": 60 if has_sched and not has_task else 65,
+        "plan_revision": 1 if has_sched and not has_task else 0,
+        "message": "Critic review complete. Publishing the final plan.",
+    })
     _persist_reasoning(workflow_id, wf_store)
     await asyncio.sleep(0.2)
 

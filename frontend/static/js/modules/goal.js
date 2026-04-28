@@ -92,6 +92,41 @@ function renderWorkflowLogItem(entry = {}) {
         </div>`;
 }
 
+function renderPlanningSkeleton(status = 'planning') {
+    const label = status === 'replanning' ? 'Rebuilding plan with Critic feedback…' : 'Orchestrator is drafting the execution graph…';
+    const stages = [
+        { title: 'Goal intake', agent: 'Orchestrator', detail: 'Parsing user intent and constraints.' },
+        { title: 'Plan synthesis', agent: 'Planner', detail: 'Creating the shortest safe path.' },
+        { title: 'Critic review', agent: 'Critic', detail: 'Checking dependencies and bottlenecks.' },
+        { title: 'Execution dispatch', agent: 'Executor', detail: 'Waiting to launch the first agent step.' },
+    ];
+
+    return `
+        <div class="workflow-empty-state" style="padding:18px 16px">
+            <div class="workflow-live-title" style="font-size:16px;margin-bottom:6px">${label}</div>
+            <div class="workflow-live-sub" style="margin-bottom:14px">This is the actual planning phase, not a dead screen. The orchestrator is building the plan before the agent steps begin.</div>
+            <div class="workflow-step-list">
+                ${stages.map((stage, idx) => `
+                    <div class="workflow-step-card ${idx === 0 ? 'starting' : 'pending'}" style="background:linear-gradient(135deg, rgba(124,77,255,0.06), rgba(26,115,232,0.04));">
+                        <div class="workflow-step-top">
+                            <div style="min-width:0">
+                                <div class="workflow-step-name">${idx + 1}. ${stage.title}</div>
+                                <div class="workflow-step-meta">
+                                    <span class="workflow-step-chip active">${stage.agent}</span>
+                                    <span class="workflow-step-chip">Planning</span>
+                                </div>
+                            </div>
+                            <span class="workflow-step-chip" style="background:var(--g-violet-light);color:var(--g-violet);border-color:transparent">
+                                ${idx === 0 ? 'Live' : 'Queued'}
+                            </span>
+                        </div>
+                        <div class="workflow-step-desc">${stage.detail}</div>
+                    </div>
+                `).join('')}
+            </div>
+        </div>`;
+}
+
 function renderWorkflowBoard(state = {}) {
     const container = document.getElementById('workflow-live-board');
     if (!container) return null;
@@ -141,11 +176,11 @@ function renderWorkflowBoard(state = {}) {
 
     const stepsHtml = merged.steps.length
         ? merged.steps.map(step => renderWorkflowStepCard(step, activeStep && step.step_id === activeStep.step_id)).join('')
-        : `<div class="workflow-empty-state"><div class="ms" style="font-size:32px;display:block;margin-bottom:8px;color:var(--g-violet)">schema</div>Waiting for the orchestrator to publish a plan.</div>`;
+        : renderPlanningSkeleton(merged.status);
 
     const logsHtml = nextLogs.length
         ? nextLogs.map(renderWorkflowLogItem).join('')
-        : `<div class="workflow-empty-state">Live reasoning will appear here once the plan starts moving.</div>`;
+        : `<div class="workflow-empty-state">Planner, Critic, and Executor updates will appear here as soon as the plan starts moving.</div>`;
 
     container.innerHTML = `
         <div class="workflow-live-head">

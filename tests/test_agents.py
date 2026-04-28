@@ -10,6 +10,7 @@ from types import SimpleNamespace
 from datetime import datetime
 
 from backend.agents.critic_agent import CriticAgent, RiskLevel, WorkflowIssue
+from backend.agents.param_mitra_agent import ParamMitraAgent
 from backend.agents.orchestrator_agent import OrchestratorAgent
 from backend.agents.workflow_schema import WorkflowPlan
 from backend.services.knowledge_graph_service import KnowledgeGraphService
@@ -433,6 +434,62 @@ async def test_orchestrator_interrupts_running_workflow_on_replan(setup_services
     assert orchestrator.workflows[workflow_id]["status"] == "completed"
     assert list(orchestrator.workflows[workflow_id]["results"].keys()) == [0, 2, 3]
     assert 1 not in orchestrator.workflows[workflow_id]["results"]
+
+
+@pytest.mark.asyncio
+async def test_param_mitra_returns_structured_audit_with_mock_llm():
+    """Test that the local mock LLM yields the UI-friendly Param Mitra shape."""
+
+    llm = create_llm_service(use_mock=True)
+    agent = ParamMitraAgent(llm)
+
+    result = await agent.generate_audit(
+        {
+            "git_summary": "2 active repos. PRs: #12 'Refactor workflow' [open]",
+            "email_summary": "1 unread email. Urgent: 'Need quick review' from lead@example.com",
+            "task_status": "3 open tasks, 4 completed. Efficiency: 57%. Overdue: 'Launch notes'",
+            "goals": "Reading: 'Atomic Habits' (42/300 pages)",
+        }
+    )
+
+    assert result["summary"]
+    assert 0 <= result["vibe_score"] <= 100
+    assert set(["code", "communication", "strategic_alignment", "efficiency", "cheer"]).issubset(result.keys())
+    assert "assessment" in result["code"]
+    assert "insight" in result["communication"]
+    assert "score" in result["strategic_alignment"]
+
+
+@pytest.mark.asyncio
+async def test_param_mitra_normalizes_legacy_fallback_shape():
+    """Test that older guru_message/scores payloads are converted to the expected audit contract."""
+
+    class LegacyLLM:
+        async def call(self, prompt: str, **kwargs):
+            return """
+            {
+              "guru_message": "I am observing your path.",
+              "scores": {"code_mastery": 90, "communication": 60, "efficiency": 50},
+              "bottlenecks": ["Too many meetings", "Tasks are being moved but not finished"],
+              "potential_unlock": "Spend 30 minutes refactoring the core engine."
+            }
+            """
+
+    agent = ParamMitraAgent(LegacyLLM())
+    result = await agent.generate_audit(
+        {
+            "git_summary": "No recent commits found.",
+            "email_summary": "No urgent emails.",
+            "task_status": "2 open tasks, 1 completed. Efficiency: 33%. Overdue: 'Spec review'",
+            "goals": "Reading: 'Deep Work' (120/304 pages)",
+        }
+    )
+
+    assert result["summary"] == "I am observing your path."
+    assert result["vibe_score"] == 90
+    assert result["communication"]["assessment"] in {"great", "good", "needs_improvement"}
+    assert result["efficiency"]["insight"]
+    assert result["strategic_alignment"]["suggestion"]
 
 
 def test_critic_agent_explains_decisions():

@@ -165,6 +165,7 @@
       if (!res.ok) throw new Error(data.detail || 'Login failed');
       localStorage.setItem('orch-session-token', data.token);
       localStorage.setItem('orch-user', JSON.stringify(data.user));
+      localStorage.removeItem('orch-onboarded');
       window.location.href = '/';
     } catch (err) {
       showError(err.message);
@@ -191,6 +192,7 @@
       if (!res.ok) throw new Error(data.detail || 'Registration failed');
       localStorage.setItem('orch-session-token', data.token);
       localStorage.setItem('orch-user', JSON.stringify(data.user));
+      localStorage.removeItem('orch-onboarded');
       window.location.href = '/';
     } catch (err) {
       showError(err.message);

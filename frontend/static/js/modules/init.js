@@ -1,7 +1,42 @@
 import { activityFeed } from './feed.js';
 import { switchView } from './navigation.js';
 import { applyTheme } from './theme.js';
-import { runDemo } from './demos.js';
+import { fetchTasks, runDemo } from './demos.js';
+import { renderTaskGrid } from './renderers.js';
+
+async function loadDashboardTasks() {
+    const dashboardLabel = document.getElementById('dashboard-tasks-label');
+    const dashboardGrid  = document.getElementById('dashboard-tasks-grid');
+    const tasksLabel     = document.getElementById('tasks-source-label');
+    const tasksTabCount   = document.getElementById('tasks-tab-count');
+    if (dashboardLabel) dashboardLabel.textContent = 'Your Tasks · Loading…';
+    if (tasksLabel) tasksLabel.textContent = 'Your Tasks · Loading…';
+    if (tasksTabCount) tasksTabCount.textContent = '…';
+    if (dashboardGrid) {
+        renderTaskGrid(dashboardGrid, [], { emptyMessage: 'Loading your live tasks…' });
+    }
+    try {
+        const tasks = await fetchTasks();
+        const count  = tasks.length;
+        const label  = `Your Tasks · ${count} item${count === 1 ? '' : 's'}`;
+        if (dashboardLabel) dashboardLabel.textContent = label;
+        if (tasksLabel) tasksLabel.textContent = label;
+        if (tasksTabCount) tasksTabCount.textContent = String(count);
+        if (dashboardGrid) {
+            renderTaskGrid(dashboardGrid, tasks, { emptyMessage: 'No tasks found. Create a goal to generate active work.' });
+        }
+        if (typeof window.renderTasks === 'function') window.renderTasks(tasks);
+        window._currentTasks = tasks;
+    } catch (err) {
+        const message = 'Unable to load tasks right now.';
+        if (dashboardLabel) dashboardLabel.textContent = 'Your Tasks · Unavailable';
+        if (tasksLabel) tasksLabel.textContent = 'Your Tasks · Unavailable';
+        if (tasksTabCount) tasksTabCount.textContent = '!';
+        if (dashboardGrid) {
+            renderTaskGrid(dashboardGrid, [], { emptyMessage: `${message} Sign in again or refresh to retry.` });
+        }
+    }
+}
 
 export function initUI() {
     const greeting = document.getElementById('greetingLine');
@@ -26,6 +61,7 @@ export function initUI() {
 
     switchView('dashboard');
     activityFeed.log('System ready. Orchestra MD3.', 'status');
+    window.setTimeout(() => { loadDashboardTasks(); }, 150);
 
     setTimeout(() => { runDemo('news'); runDemo('research'); }, 500);
 
@@ -49,6 +85,7 @@ export function restartTour() {
 }
 
 window.restartTour = restartTour;
+window.fetchDashboardTasks = loadDashboardTasks;
 
 // ── Bootstrap ────────────────────────────────────────────────────────────────
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initUI);

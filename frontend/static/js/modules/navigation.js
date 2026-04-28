@@ -37,6 +37,18 @@ export function switchView(viewId) {
     if (viewId === 'integrations-settings' && window.loadIntegrationStatuses) {
         window.loadIntegrationStatuses();
     }
+
+    if (target && typeof target.scrollIntoView === 'function') {
+        target.scrollIntoView({ block: 'start', behavior: 'auto' });
+    }
+}
+
+export function openWorkflowsPage() {
+    switchView('workflows');
+    const panel = document.getElementById('workflows');
+    if (panel && typeof panel.scrollIntoView === 'function') {
+        panel.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    }
 }
 
 export function closeActiveWorkflows() {
@@ -131,6 +143,7 @@ document.addEventListener('click', e => {
 });
 
 window.switchView        = switchView;
+window.openWorkflowsPage = openWorkflowsPage;
 window.openPalette       = openPalette;
 window.closePalette      = closePalette;
 window.toggleActiveWorkflows = toggleActiveWorkflows;

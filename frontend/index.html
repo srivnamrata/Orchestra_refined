@@ -2316,7 +2316,7 @@ html.dark .completion-toast { box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1p
 
     <!-- Stats -->
     <div class="stats-row anim a2">
-      <div class="stat-card" id="stat-active-wf" onclick="window.switchView('workflows')" style="cursor:pointer" title="View active workflows">
+      <div class="stat-card" id="stat-active-wf" onclick="window.openWorkflowsPage()" style="cursor:pointer" title="View active workflows">
         <div class="sc-icon-row">
           <div class="sc-icon" style="background:var(--g-amber-light)"><span class="ms" style="color:var(--g-amber)">account_tree</span></div>
           <span class="sc-trend trend-nt" id="active-wf-trend">+2 this week</span>
@@ -2378,59 +2378,6 @@ html.dark .completion-toast { box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1p
 
       <!-- Left col -->
       <div class="runs-col">
-        <div class="sec-head"><div class="sec-title">Active Workflows</div><div class="sec-link">View all</div></div>
-
-        <div class="run-card live">
-          <div>
-            <div class="run-title">API Documentation Workflow</div>
-            <div class="run-meta">
-              <span class="run-tag tag-live"><span class="tag-dot" style="background:var(--g-green-mid)"></span>Live</span>
-              <span class="chip">Orchestrator</span><span class="chip">Researcher</span><span class="chip">Writer</span>
-              <span style="font-family:var(--font-mono);font-size:10px;color:var(--md-dim)">18m ago</span>
-            </div>
-            <div class="run-hint" id="hint1">Researcher → scanning API endpoint schemas…</div>
-            <div class="run-bar-bg"><div class="run-bar-fill" id="bar1" style="width:0%;background:var(--g-green-mid)"></div></div>
-          </div>
-          <div class="run-right">
-            <div class="run-pct" style="color:var(--g-green)" id="pct1">65%</div>
-            <button class="run-act" onclick="window.open('/trace','_blank')">Open ↗</button>
-          </div>
-        </div>
-
-        <div class="run-card live">
-          <div>
-            <div class="run-title">UI Redesign Planning</div>
-            <div class="run-meta">
-              <span class="run-tag tag-live"><span class="tag-dot" style="background:var(--g-green-mid)"></span>Live</span>
-              <span class="chip">Orchestrator</span><span class="chip">Critic</span>
-              <span style="font-family:var(--font-mono);font-size:10px;color:var(--md-dim)">42m ago</span>
-            </div>
-            <div class="run-hint" id="hint2">Critic → reviewing component hierarchy…</div>
-            <div class="run-bar-bg"><div class="run-bar-fill" id="bar2" style="width:0%;background:var(--g-green-mid)"></div></div>
-          </div>
-          <div class="run-right">
-            <div class="run-pct" style="color:var(--g-green)" id="pct2">45%</div>
-            <button class="run-act" onclick="window.open('/trace','_blank')">Open ↗</button>
-          </div>
-        </div>
-
-        <div class="run-card paused">
-          <div>
-            <div class="run-title">Week Planning — Personal Goals</div>
-            <div class="run-meta">
-              <span class="run-tag tag-paused">⏸ Paused</span>
-              <span class="chip">Orchestrator</span><span class="chip">Scheduler</span>
-              <span style="font-family:var(--font-mono);font-size:10px;color:var(--md-dim)">Paused 2h ago</span>
-            </div>
-            <div class="run-hint" style="color:var(--g-amber)">⚠ Awaiting input on Thursday schedule</div>
-            <div class="run-bar-bg"><div class="run-bar-fill" style="width:30%;background:#f29900"></div></div>
-          </div>
-          <div class="run-right">
-            <div class="run-pct" style="color:var(--g-amber)">30%</div>
-            <button class="run-act" style="color:var(--g-amber);border-color:rgba(176,96,0,0.3)">Review</button>
-          </div>
-        </div>
-
         <!-- Smart Activity Feed -->
         <div class="feed-card">
           <div class="feed-head">
@@ -2583,7 +2530,7 @@ html.dark .completion-toast { box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1p
           <div class="intel-tabs">
             <button class="intel-tab active" onclick="fetchIntel('news',this)">📰 News <span class="intel-tab-count">3</span></button>
             <button class="intel-tab" onclick="fetchIntel('research',this)">🔬 Research <span class="intel-tab-count">4</span></button>
-            <button class="intel-tab" onclick="fetchIntel('tasks',this)">✅ Tasks <span class="intel-tab-count">6</span></button>
+            <button class="intel-tab" onclick="fetchIntel('tasks',this)">✅ Tasks <span class="intel-tab-count" id="tasks-tab-count">…</span></button>
             <button class="intel-tab" onclick="fetchIntel('schedule',this)">📅 Schedule <span class="intel-tab-count">4</span></button>
             <button class="intel-tab" id="tab-github" onclick="fetchIntel('github',this)">🐙 GitHub</button>
             <button class="intel-tab" id="tab-slack"  onclick="fetchIntel('slack',this)">💬 Slack</button>
@@ -2618,14 +2565,12 @@ html.dark .completion-toast { box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1p
         </div>
 
         <div class="intel-pane" id="pane-tasks">
-          <div class="intel-source-label">Your Tasks · 6 items</div>
-          <div class="task-intel-grid">
-            <div class="task-intel-item"><div class="ti-check done">✓</div><div><div class="ti-title done-text">Write Database Schema Documentation</div><div style="display:flex;gap:6px;margin-top:4px"><span class="ti-priority" style="background:var(--g-green-light);color:var(--g-green)">done</span><span class="ti-due">2h ago</span></div></div></div>
-            <div class="task-intel-item"><div class="ti-check"></div><div><div class="ti-title">Review API Documentation draft</div><div style="display:flex;gap:6px;margin-top:4px"><span class="ti-priority" style="background:var(--g-amber-light);color:var(--g-amber)">high</span><span class="ti-due">Due today</span></div></div></div>
-            <div class="task-intel-item"><div class="ti-check"></div><div><div class="ti-title">Approve UI Redesign component list</div><div style="display:flex;gap:6px;margin-top:4px"><span class="ti-priority" style="background:var(--g-blue-light);color:var(--g-blue)">medium</span><span class="ti-due">Due tomorrow</span></div></div></div>
-            <div class="task-intel-item"><div class="ti-check"></div><div><div class="ti-title">Schedule Q2 board review meeting</div><div style="display:flex;gap:6px;margin-top:4px"><span class="ti-priority" style="background:var(--g-red-light);color:var(--g-red)">critical</span><span class="ti-due">Overdue 1d</span></div></div></div>
-            <div class="task-intel-item"><div class="ti-check"></div><div><div class="ti-title">Review Critic Replan suggestions</div><div style="display:flex;gap:6px;margin-top:4px"><span class="ti-priority" style="background:var(--g-amber-light);color:var(--g-amber)">high</span><span class="ti-due">This week</span></div></div></div>
-            <div class="task-intel-item"><div class="ti-check done">✓</div><div><div class="ti-title done-text">Research SaaS pricing benchmarks</div><div style="display:flex;gap:6px;margin-top:4px"><span class="ti-priority" style="background:var(--g-green-light);color:var(--g-green)">done</span><span class="ti-due">Yesterday</span></div></div></div>
+          <div class="intel-source-label" id="dashboard-tasks-label">Your Tasks · Loading…</div>
+          <div class="task-intel-grid" id="dashboard-tasks-grid">
+            <div style="grid-column:1/-1;padding:24px;text-align:center;color:var(--md-dim);font-size:13px">
+              <span class="ms" style="font-size:24px;display:block;margin-bottom:8px">hourglass_top</span>
+              Loading your live tasks…
+            </div>
           </div>
         </div>
 
@@ -3211,6 +3156,16 @@ html.dark .completion-toast { box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1p
         navItem = Array.from(document.querySelectorAll('.nav-item')).find(i => i.textContent.toLowerCase().includes(viewId.toLowerCase()));
     }
     if (navItem) navItem.classList.add('active');
+    if (target && typeof target.scrollIntoView === 'function') {
+        target.scrollIntoView({ behavior: 'auto', block: 'start' });
+    }
+  };
+  window.openWorkflowsPage = window.openWorkflowsPage || function() {
+    window.switchView('workflows');
+    const target = document.getElementById('workflows');
+    if (target && typeof target.scrollIntoView === 'function') {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
   };
   window.switchSpecialist = function(type) {
     window.switchView('dashboard');
@@ -3316,6 +3271,7 @@ window.orchestraLogout = function() {
   }
   localStorage.removeItem('orch-session-token');
   localStorage.removeItem('orch-user');
+  localStorage.removeItem('orch-onboarded');
   window.location.href = '/login';
 };
 </script>

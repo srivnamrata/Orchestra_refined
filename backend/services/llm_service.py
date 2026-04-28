@@ -70,6 +70,36 @@ class MockLLMService(LLMService):
                 "revised": "Could you please take a look at this when you have a moment?",
                 "tone_changes": ["Added politeness", "softened urgency", "kept the request clear"],
             })
+        if "param mitra" in prompt.lower() or "weekly insight report" in prompt.lower():
+            return json.dumps({
+                "summary": "You’re making steady progress, with the clearest wins in task execution and room to sharpen communication.",
+                "vibe_score": 82,
+                "code": {
+                    "assessment": "good",
+                    "insight": "Code activity looks healthy and consistent, with enough momentum to keep shipping.",
+                    "training": None,
+                },
+                "communication": {
+                    "assessment": "needs_improvement",
+                    "insight": "Your communication would benefit from a little more context and warmth in a few places.",
+                    "training": {
+                        "topic": "Clearer written communication",
+                        "why": "A more explicit tone can cut down on follow-up questions and friction.",
+                        "link_hint": "Coursera / YouTube / Book",
+                    },
+                },
+                "strategic_alignment": {
+                    "score": 79,
+                    "assessment": "Most of the current work aligns with your long-term goals, but a few items still look exploratory.",
+                    "suggestion": "Keep one eye on the North Star and trim any work that does not clearly support it.",
+                },
+                "efficiency": {
+                    "assessment": "good",
+                    "insight": "Task flow is reasonably balanced, and you are finishing more than you are starting.",
+                    "training": None,
+                },
+                "cheer": "Keep going. Small wins are stacking up.",
+            })
         if "revised plan" in prompt.lower():
             return json.dumps({"revised_plan": [], "explanation": "Optimized", "efficiency_gain": 0.20, "confidence": 0.80})
         if "on track" in prompt.lower():

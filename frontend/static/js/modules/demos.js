@@ -57,6 +57,13 @@ export async function runDemo(type) {
     }
 }
 
+export async function fetchTasks() {
+    const res = await apiFetch('/api/tasks', { method: 'GET' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    return data.tasks || [];
+}
+
 export function fetchIntel(type, btn) {
     if (!type) {
         const newsTab = document.querySelector('.intel-tab');
@@ -76,9 +83,38 @@ export function fetchIntel(type, btn) {
         return;
     }
     switchIntel(type, btn);
+    if (type === 'tasks') {
+        activityFeed.log('🏃 Starting TASKS sequence…', 'status', 'SYSTEM');
+        const pane = document.getElementById('pane-tasks');
+        const paneGrid = pane ? pane.querySelector('.task-intel-grid') : null;
+        if (paneGrid) {
+            paneGrid.innerHTML = `<div style="grid-column:1/-1;padding:24px;text-align:center;color:var(--md-dim);font-size:13px">
+                <span class="ms" style="font-size:24px;display:block;margin-bottom:8px">hourglass_top</span>
+                Fetching your live tasks…
+            </div>`;
+        }
+        fetchTasks().then(tasks => {
+            renderTasks(tasks);
+            const label = document.getElementById('tasks-source-label');
+            const tabCount = document.getElementById('tasks-tab-count');
+            if (label) label.textContent = `Your Tasks · ${tasks.length} item${tasks.length === 1 ? '' : 's'}`;
+            const dashboardLabel = document.getElementById('dashboard-tasks-label');
+            if (dashboardLabel) dashboardLabel.textContent = `Your Tasks · ${tasks.length} item${tasks.length === 1 ? '' : 's'}`;
+            if (tabCount) tabCount.textContent = String(tasks.length);
+            const dashboardGrid = document.getElementById('dashboard-tasks-grid');
+            if (dashboardGrid && window.renderTaskGrid) {
+                window.renderTaskGrid(dashboardGrid, tasks, { emptyMessage: 'No tasks found. Create a goal to generate active work.' });
+            }
+            window._currentTasks = tasks;
+        }).catch(err => {
+            activityFeed.log(`⚠️ Sequence failed: ${err.message}`, 'warning', 'TASKS');
+        });
+        return;
+    }
     runDemo(type);
 }
 
 window.runDemo    = runDemo;
 window.fetchIntel = fetchIntel;
 window.switchIntel = switchIntel;
+window.fetchTasks  = fetchTasks;

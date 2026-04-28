@@ -356,29 +356,47 @@ function _agentBadge(t) {
     return '';
 }
 
-export function renderTasks(tasks) {
+function _taskCardMarkup(t) {
     const prioColor = { critical:'var(--g-red)', high:'var(--g-amber)', medium:'var(--g-blue)', low:'#64748b' };
     const prioBg    = { critical:'var(--g-red-light)', high:'var(--g-amber-light)', medium:'var(--g-blue-light)', low:'rgba(100,116,139,0.12)' };
-    const html = (tasks||[]).slice(0,8).map(t => {
-        const done  = t.status === 'completed' || t.status === 'done';
-        const p     = (t.priority||'medium').toLowerCase();
-        const due   = t.due_date ? new Date(t.due_date).toLocaleDateString('en-GB',{day:'numeric',month:'short'}) : '';
-        const badge = _agentBadge(t);
-        return `<div class="task-intel-item">
-            <div class="ti-check ${done?'done':''}" style="cursor:default">${done?'✓':''}</div>
-            <div><div class="ti-title ${done?'done-text':''}">${t.title}</div>
-            <div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap;align-items:center">
-                <span class="ti-priority" style="background:${prioBg[p]||'rgba(100,116,139,0.12)'};color:${prioColor[p]||'#64748b'}">${p}</span>
-                ${due?`<span class="ti-due">${due}</span>`:''}
-                ${badge}
-            </div></div>
-        </div>`;
-    }).join('');
+    const done  = t.status === 'completed' || t.status === 'done';
+    const p     = (t.priority||'medium').toLowerCase();
+    const due   = t.due_date ? new Date(t.due_date).toLocaleDateString('en-GB',{day:'numeric',month:'short'}) : '';
+    const badge = _agentBadge(t);
+    return `<div class="task-intel-item">
+        <div class="ti-check ${done?'done':''}" style="cursor:default">${done?'✓':''}</div>
+        <div><div class="ti-title ${done?'done-text':''}">${t.title}</div>
+        <div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap;align-items:center">
+            <span class="ti-priority" style="background:${prioBg[p]||'rgba(100,116,139,0.12)'};color:${prioColor[p]||'#64748b'}">${p}</span>
+            ${due?`<span class="ti-due">${due}</span>`:''}
+            ${badge}
+        </div></div>
+    </div>`;
+}
+
+function _taskEmptyMarkup(message) {
+    return `<div style="grid-column:1/-1;padding:24px;text-align:center;color:var(--md-dim);font-size:13px">
+        <span class="ms" style="font-size:24px;display:block;margin-bottom:8px">task_alt</span>
+        ${message}
+    </div>`;
+}
+
+export function renderTaskGrid(target, tasks, options = {}) {
+    const el = typeof target === 'string' ? document.getElementById(target) : target;
+    if (!el) return;
+    const list = (tasks || []).slice(0, options.limit || 8);
+    el.innerHTML = list.length ? list.map(_taskCardMarkup).join('') : _taskEmptyMarkup(options.emptyMessage || 'No tasks found.');
+}
+
+export function renderTasks(tasks) {
+    const html = (tasks||[]).slice(0,8).map(_taskCardMarkup).join('');
     const pane = document.getElementById('pane-tasks');
     const all  = document.getElementById('all-tasks-list');
-    if (pane) { const g = pane.querySelector('.task-intel-grid'); if (g) g.innerHTML = html; }
-    if (all)  all.innerHTML = html;
+    if (pane) { const g = pane.querySelector('.task-intel-grid'); if (g) g.innerHTML = html || _taskEmptyMarkup('No tasks found.'); }
+    if (all)  all.innerHTML = html || _taskEmptyMarkup('No tasks found. Fetch intelligence to see active tasks.');
 }
+
+window.renderTaskGrid = renderTaskGrid;
 
 export function renderSchedule(events) {
     const pane = document.getElementById('pane-schedule');
