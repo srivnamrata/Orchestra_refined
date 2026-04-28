@@ -674,6 +674,8 @@ body {
     border-left: 3px solid transparent;
     transition: var(--transition);
     animation: slideIn 0.3s ease-out;
+    cursor: pointer;
+
 }
 
 @keyframes slideIn {

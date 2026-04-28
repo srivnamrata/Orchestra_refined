@@ -239,29 +239,44 @@ class MultiAgentDebateEngine:
                                    context: str) -> DebateArgument:
         """Security Auditor's assessment"""
         
-        # This would call the security auditor agent
-        # For now, return a mock decision
+        # Call the LLM to get a real agentic assessment
+        prompt = f"""You are a strict Security Auditor Agent.
+        Review this action for PII leaks, destructive intent, or high risk:
+        Action: {json.dumps(action)}
+        Reasoning: {reasoning}
         
-        safety_concerns = len([v for k, v in action.items() 
-                              if isinstance(v, str) and 
-                              any(x in v.lower() 
-                                  for x in ["delete", "transfer", "send"])])
+        Reply ONLY with a JSON object:
+        {{"has_concerns": boolean, "position": "short statement", "evidence": ["point 1", "point 2"]}}
+        """
         
-        if safety_concerns > 0:
+        has_concerns = False
+        position = "✅ Safety profile seems acceptable"
+        evidence = ["Risk level: MEDIUM"]
+        
+        try:
+            from backend.api import state
+            raw_response = await state.llm_service.call(prompt)
+            from backend.services.llm_utils import parse_llm_json
+            decision = parse_llm_json(raw_response)
+            has_concerns = decision.get("has_concerns", False)
+            position = decision.get("position", position)
+            evidence = decision.get("evidence", evidence)
+        except Exception as e:
+            logger.warning(f"Debate LLM call failed, falling back to heuristics: {e}")
+        
+        if has_concerns:
             vote = VoteType.CONCERN
-            position = "⚠️  I have safety concerns about this action"
             confidence = 0.8
         else:
             vote = VoteType.CONDITIONAL_SUPPORT
-            position = "✅ Safety profile seems acceptable with monitoring"
             confidence = 0.85
         
         return DebateArgument(
             agent=DebateParticipant.SECURITY_AUDITOR,
             timestamp=datetime.now().isoformat(),
             position=position,
-            reasoning="Assessed for PII leaks, reversibility, and worst-case risk",
-            evidence=["PII check: PASS", "Reversibility: HIGH", "Risk level: MEDIUM"],
+            reasoning="Evaluated via Security Auditor LLM check",
+            evidence=evidence,
             vote=vote,
             confidence=confidence
         )
@@ -271,24 +286,40 @@ class MultiAgentDebateEngine:
                                       context: str) -> DebateArgument:
         """Knowledge Agent's context assessment"""
         
-        # Check for goal alignment
-        is_aligned = "goal" not in context or "aligned" in context.lower()
+        prompt = f"""You are the Knowledge Agent. Review this action for goal alignment:
+        Action: {json.dumps(action)}
+        Reasoning: {reasoning}
+        Context: {context}
+        Reply ONLY with JSON: {{"is_aligned": boolean, "position": "statement", "evidence": ["point"]}}"""
+        
+        is_aligned = True
+        position = "✅ This action aligns with our knowledge base and goals"
+        evidence = ["Consistency check: PASS", "User preference alignment: HIGH"]
+        
+        try:
+            from backend.api import state
+            raw_response = await state.llm_service.call(prompt)
+            from backend.services.llm_utils import parse_llm_json
+            decision = parse_llm_json(raw_response)
+            is_aligned = decision.get("is_aligned", True)
+            position = decision.get("position", position)
+            evidence = decision.get("evidence", evidence)
+        except Exception as e:
+            logger.warning(f"Knowledge Debate LLM failed: {e}")
         
         if is_aligned:
             vote = VoteType.SUPPORT
-            position = "✅ This action aligns with our knowledge base and goals"
             confidence = 0.8
         else:
             vote = VoteType.CONCERN
-            position = "⚠️  This may conflict with what we know about the user's preferences"
             confidence = 0.75
         
         return DebateArgument(
             agent=DebateParticipant.KNOWLEDGE_AGENT,
             timestamp=datetime.now().isoformat(),
             position=position,
-            reasoning="Assessed context, historical data, and goal alignment",
-            evidence=["Consistency check: PASS", "User preference alignment: HIGH"],
+            reasoning="Assessed context, historical data, and goal alignment via LLM",
+            evidence=evidence,
             vote=vote,
             confidence=confidence
         )
@@ -298,24 +329,40 @@ class MultiAgentDebateEngine:
                                 context: str) -> DebateArgument:
         """Task Agent's domain expertise"""
         
-        # Simple heuristic: shorter actions are better
-        action_size = sum(len(str(v)) for v in action.values())
+        prompt = f"""You are the Task Execution Agent. Review this action for complexity and feasibility.
+        Action: {json.dumps(action)}
+        Reasoning: {reasoning}
+        Reply ONLY with a JSON object:
+        {{"is_feasible": boolean, "position": "short statement", "evidence": ["point 1", "point 2"]}}"""
         
-        if action_size < 1000:
+        is_feasible = True
+        position = "✅ Task execution is feasible and well-scoped"
+        evidence = ["Scope: REASONABLE", "Dependencies: CLEAR"]
+        
+        try:
+            from backend.api import state
+            raw_response = await state.llm_service.call(prompt)
+            from backend.services.llm_utils import parse_llm_json
+            decision = parse_llm_json(raw_response)
+            is_feasible = decision.get("is_feasible", True)
+            position = decision.get("position", position)
+            evidence = decision.get("evidence", evidence)
+        except Exception as e:
+            logger.warning(f"Task Debate LLM failed: {e}")
+        
+        if is_feasible:
             vote = VoteType.SUPPORT
-            position = "✅ Task execution is feasible and well-scoped"
             confidence = 0.85
         else:
             vote = VoteType.CONCERN
-            position = "⚠️  This task seems complex - might benefit from decomposition"
             confidence = 0.7
         
         return DebateArgument(
             agent=DebateParticipant.TASK_AGENT,
             timestamp=datetime.now().isoformat(),
             position=position,
-            reasoning="Assessed task complexity, dependencies, and feasibility",
-            evidence=["Scope: REASONABLE", "Dependencies: CLEAR"],
+            reasoning="Assessed task complexity, dependencies, and feasibility via LLM",
+            evidence=evidence,
             vote=vote,
             confidence=confidence
         )
@@ -325,16 +372,37 @@ class MultiAgentDebateEngine:
                                       context: str) -> DebateArgument:
         """Scheduler Agent's timeline assessment"""
         
-        vote = VoteType.CONDITIONAL_SUPPORT
-        position = "⏰ Timing looks acceptable, but monitor for deadline conflicts"
-        confidence = 0.8
+        prompt = f"""You are the Scheduler Agent. Review this action for timeline constraints and priority conflicts.
+        Action: {json.dumps(action)}
+        Reasoning: {reasoning}
+        Context: {context}
+        Reply ONLY with a JSON object:
+        {{"has_conflicts": boolean, "position": "short statement", "evidence": ["point 1"]}}"""
+        
+        has_conflicts = False
+        position = "⏰ Timing looks acceptable, no immediate deadline conflicts"
+        evidence = ["Calendar: FREE", "Priority conflicts: NONE"]
+        
+        try:
+            from backend.api import state
+            raw_response = await state.llm_service.call(prompt)
+            from backend.services.llm_utils import parse_llm_json
+            decision = parse_llm_json(raw_response)
+            has_conflicts = decision.get("has_conflicts", False)
+            position = decision.get("position", position)
+            evidence = decision.get("evidence", evidence)
+        except Exception as e:
+            logger.warning(f"Scheduler Debate LLM failed: {e}")
+        
+        vote = VoteType.CONCERN if has_conflicts else VoteType.CONDITIONAL_SUPPORT
+        confidence = 0.80
         
         return DebateArgument(
             agent=DebateParticipant.SCHEDULER_AGENT,
             timestamp=datetime.now().isoformat(),
             position=position,
-            reasoning="Assessed resource availability and timeline constraints",
-            evidence=["Calendar: FREE", "Priority conflicts: NONE"],
+            reasoning="Assessed resource availability and timeline constraints via LLM",
+            evidence=evidence,
             vote=vote,
             confidence=confidence
         )

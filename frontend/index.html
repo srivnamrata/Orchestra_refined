@@ -3282,6 +3282,56 @@ html.dark .completion-toast { box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1p
         .catch(() => {});
 })();
 
+// Connect Dashboard Live Reasoning Trace
+(function() {
+    const traceBody = document.getElementById('live-trace-body');
+    const scanDot = document.getElementById('scanDot');
+    const scanLabel = document.getElementById('scanLabel');
+    const traceIdle = document.getElementById('traceIdle');
+    if (!traceBody) return;
+    
+    const es = new EventSource('/thought-trace/stream');
+    es.addEventListener('thought', (e) => {
+        try {
+            const data = JSON.parse(e.data);
+            const msg = data.message || '';
+            const agent = (data.agent || 'orchestrator').toLowerCase();
+            const role = data.role || agent.toUpperCase();
+            
+            if (traceIdle) traceIdle.style.display = 'none';
+            traceBody.style.display = 'block';
+            if (scanDot) scanDot.className = 'scan-dot running';
+            if (scanLabel) scanLabel.textContent = 'Live Analysis…';
+            
+            const colorMap = { 'critic': 'trace-hl-amber', 'auditor': 'trace-hl-green', 'researcher': 'trace-hl-blue' };
+            const colorClass = colorMap[agent] || 'trace-hl-blue';
+            
+            const line = document.createElement('div');
+            line.className = 'trace-line';
+            line.dataset.agent = agent;
+            line.innerHTML = `<span class="trace-agent ${colorClass}">[${role}]</span> <span>${msg}</span>`;
+            
+            const activeTab = document.querySelector('.trace-tab.active');
+            if (activeTab && activeTab.textContent.toLowerCase() !== agent && activeTab.textContent.toLowerCase() !== 'all' && !activeTab.textContent.includes('All')) {
+                line.style.display = 'none';
+            }
+            
+            traceBody.appendChild(line);
+            traceBody.scrollTop = traceBody.scrollHeight;
+        } catch(err) {}
+    });
+
+    window.clearScan = function() {
+        if (traceBody) {
+            traceBody.innerHTML = '';
+            traceBody.style.display = 'none';
+        }
+        if (traceIdle) traceIdle.style.display = 'flex';
+        if (scanDot) scanDot.className = 'scan-dot idle';
+        if (scanLabel) scanLabel.textContent = 'Idle';
+    };
+})();
+
 window.orchestraLogout = function() {
   const token = localStorage.getItem('orch-session-token');
   if (token) {
@@ -3290,6 +3340,7 @@ window.orchestraLogout = function() {
   localStorage.removeItem('orch-session-token');
   localStorage.removeItem('orch-user');
   localStorage.removeItem('orch-onboarded');
+  sessionStorage.removeItem('orch-onboarded');
   window.location.href = '/login';
 };
 </script>

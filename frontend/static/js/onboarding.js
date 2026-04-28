@@ -196,17 +196,17 @@ window.orchOnboard = {
       window.runScan();
     }
     document.getElementById('orchOnboardOverlay').classList.remove('open');
-    try { localStorage.setItem('orch-onboarded','true'); } catch(e){}
+    try { sessionStorage.setItem('orch-onboarded','true'); } catch(e){}
   }
 };
 
 // Show on first visit
-let done; try { done = localStorage.getItem('orch-onboarded'); } catch(e){}
+let done; try { done = sessionStorage.getItem('orch-onboarded'); } catch(e){}
 if(!done) setTimeout(() => window.orchOnboard.open(), 800);
 
 // Restart tour — callable from Ctrl+K palette or anywhere
 window.restartTour = function() {
-  try { localStorage.removeItem('orch-onboarded'); } catch(e){}
+  try { sessionStorage.removeItem('orch-onboarded'); } catch(e){}
   window.orchOnboard.open();
 };
 

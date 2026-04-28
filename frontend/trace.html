@@ -497,6 +497,7 @@ html.dark .io-box { box-shadow: inset 0 1px 0 rgba(255,255,255,0.04); }
   <div class="tb-title">Agent Trace — API Documentation Workflow</div>
   <div class="tb-meta" id="tbMeta">Run started 09:41 · 4 agents · 38m elapsed</div>
   <div class="tb-right">
+    <button class="tb-btn" onclick="clearTrace()"><span class="ms sm">delete</span> Clear</button>
     <button class="tb-btn" onclick="exportTrace()"><span class="ms sm">download</span> Export</button>
     <button class="tb-btn" onclick="replayTrace()"><span class="ms sm">replay</span> Replay</button>
     <button class="theme-toggle" onclick="toggleTheme()">
@@ -980,6 +981,21 @@ function selectEvent(ev, bubble) {
   dp.appendChild(content);
 }
 
+// ── Clear Trace ──
+function clearTrace() {
+  EVENTS.length = 0;
+  selectedEvent = null;
+  AGENTS.forEach(a => { a.tasks = 0; a.status = 'idle'; });
+  renderRoster();
+  renderTimeline(activeFilter);
+  document.getElementById('tbMeta').innerHTML = `<span style="color:var(--g-green)">Live Trace Active</span> · 0 events`;
+  const dp = document.getElementById('detailPanel');
+  const existing = dp.querySelector('.dp-content');
+  if(existing) existing.remove();
+  const empty = document.getElementById('dpEmpty');
+  if(empty) empty.style.display = 'flex';
+}
+
 // ── Top bar buttons ──
 function exportTrace() {
   const btn = event.target.closest('button');
@@ -1090,6 +1106,68 @@ renderRoster();
 renderHandoffFlow();
 renderLaneHeaders();
 renderTimeline('all');
+
+// ── Live EventSource ──
+function setupLiveTrace() {
+  const es = new EventSource('/thought-trace/stream');
+  es.addEventListener('thought', (e) => {
+    try {
+      const data = JSON.parse(e.data);
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+      
+      let evType = 'task';
+      const tt = (data.thought_type || '').toLowerCase();
+      if (tt === 'thought' || tt === 'thinking') evType = 'decision';
+      else if (tt === 'finding' || tt === 'result') evType = 'output';
+      else if (tt === 'alert' || tt === 'error') evType = 'error';
+
+      const temp = document.createElement('div');
+      temp.innerHTML = data.message || 'Processing...';
+      const cleanMsg = temp.textContent || temp.innerText || '';
+
+      const agentId = (data.agent || 'orchestrator').toLowerCase();
+      if (!agentMap[agentId]) {
+        const newAgent = { 
+          id: agentId, name: data.role || agentId, role: 'Dynamic Agent', 
+          icon: '🤖', color: '#1a73e8', rgb: '26,115,232', iconBg: '#e8f0fe', 
+          status: 'running', tasks: 0, tokens: 0, duration: 'live', load: 50 
+        };
+        AGENTS.push(newAgent);
+        agentMap[agentId] = newAgent;
+        LANE_AGENTS.push(agentId);
+        renderLaneHeaders();
+      }
+
+      const newEv = {
+        id: 'live-' + Date.now() + Math.floor(Math.random()*1000),
+        time: timeStr, agent: agentId, type: evType,
+        title: data.role ? `${data.role} Activity` : 'Agent Activity',
+        detail: cleanMsg, tags: ['live', tt || 'update'],
+        filter: evType === 'decision' ? 'decision' : (evType === 'output' ? 'output' : 'all'),
+        reasoning: [cleanMsg], input: '-', output: '-'
+      };
+
+      EVENTS.push(newEv);
+      
+      const agentObj = agentMap[agentId];
+      if (agentObj) {
+        agentObj.tasks = (agentObj.tasks || 0) + 1;
+        agentObj.status = 'running';
+        renderRoster();
+      }
+
+      if (agentFilter && agentFilter === newEv.agent) renderFilteredEvents(EVENTS.filter(ev => ev.agent === agentFilter));
+      else renderTimeline(activeFilter);
+
+      const scrollEl = document.getElementById('tlScroll');
+      if (scrollEl) scrollEl.scrollTop = scrollEl.scrollHeight;
+      
+      document.getElementById('tbMeta').innerHTML = `<span style="color:var(--g-green)">Live Trace Active</span> · ${EVENTS.length} events`;
+    } catch (err) { console.error('Error parsing live thought:', err); }
+  });
+}
+setupLiveTrace();
 
 // Auto-select first event
 setTimeout(()=>{

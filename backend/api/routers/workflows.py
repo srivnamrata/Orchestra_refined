@@ -1685,6 +1685,21 @@ async def list_workflow_reasoning():
     return {"count": len(rows), "workflows": rows}
 
 
+@router.delete("/reasoning", tags=["Reasoning"])
+async def clear_all_reasoning():
+    """Allows the UI to clear the agent thought trace and reasoning history."""
+    try:
+        from backend.database import get_session
+        from sqlalchemy import text
+        db = get_session()
+        db.execute(text("DELETE FROM workflow_reasoning"))
+        db.commit()
+        db.close()
+        return {"status": "success", "message": "All reasoning history cleared"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/thought-trace/stream", tags=["Thought Trace"])
 async def thought_trace_stream():
     client_q: asyncio.Queue = asyncio.Queue(maxsize=200)
