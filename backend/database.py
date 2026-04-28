@@ -112,6 +112,18 @@ class User(Base):
     created_at    = Column(DateTime,    default=datetime.utcnow, index=True)
 
 
+class UserIntegration(Base):
+    """Stores per-user credentials for external service integrations."""
+    __tablename__ = "user_integrations"
+    id           = Column(Integer,     primary_key=True, index=True)
+    user_id      = Column(Integer,     nullable=False, index=True)
+    service      = Column(String(32),  nullable=False, index=True)  # github | slack | gmail
+    token        = Column(Text,        nullable=True)   # PAT / bot-token / refresh-token
+    extra_json   = Column(Text,        nullable=True)   # JSON: channel, client_id, etc.
+    connected_at = Column(DateTime,    default=datetime.utcnow)
+    updated_at   = Column(DateTime,    default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 class Task(Base):
     __tablename__ = "tasks"
     id           = Column(Integer,     primary_key=True, index=True)
@@ -280,6 +292,65 @@ def get_db_session():
     db = get_session()
     try:
         yield db
+    finally:
+        db.close()
+
+
+# ============================================================================
+# USER INTEGRATIONS
+# ============================================================================
+
+def upsert_integration(user_id: int, service: str, token: str, extra: dict = None):
+    import json as _json
+    db = get_session()
+    try:
+        row = db.query(UserIntegration).filter(
+            UserIntegration.user_id == user_id,
+            UserIntegration.service == service,
+        ).first()
+        if row:
+            row.token = token
+            row.extra_json = _json.dumps(extra) if extra else None
+            row.updated_at = datetime.utcnow()
+        else:
+            row = UserIntegration(user_id=user_id, service=service, token=token,
+                                  extra_json=_json.dumps(extra) if extra else None)
+            db.add(row)
+        db.commit()
+        return row
+    except Exception:
+        db.rollback(); raise
+    finally:
+        db.close()
+
+
+def get_integration(user_id: int, service: str):
+    import json as _json
+    db = get_session()
+    try:
+        row = db.query(UserIntegration).filter(
+            UserIntegration.user_id == user_id,
+            UserIntegration.service == service,
+        ).first()
+        if not row:
+            return None
+        extra = {}
+        if row.extra_json:
+            try: extra = _json.loads(row.extra_json)
+            except Exception: pass
+        return {"token": row.token, "extra": extra, "connected_at": row.connected_at}
+    finally:
+        db.close()
+
+
+def delete_integration(user_id: int, service: str):
+    db = get_session()
+    try:
+        db.query(UserIntegration).filter(
+            UserIntegration.user_id == user_id,
+            UserIntegration.service == service,
+        ).delete()
+        db.commit()
     finally:
         db.close()
 

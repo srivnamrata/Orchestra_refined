@@ -33,6 +33,10 @@ export function switchView(viewId) {
 
     const bar = document.getElementById('back-dash-bar');
     if (bar) bar.style.display = viewId === 'dashboard' ? 'none' : 'flex';
+
+    if (viewId === 'integrations-settings' && window.loadIntegrationStatuses) {
+        window.loadIntegrationStatuses();
+    }
 }
 
 export function openPalette() {

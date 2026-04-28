@@ -32,5 +32,6 @@ import './static/js/modules/goal.js';
 import './static/js/modules/demos.js';
 import './static/js/modules/veda.js';
 import './static/js/modules/guru.js';
+import './static/js/modules/integrations.js';
 import './static/js/modules/monitor.js';
 import './static/js/modules/init.js';

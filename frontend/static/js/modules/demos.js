@@ -66,7 +66,13 @@ export function fetchIntel(type, btn) {
         const label = document.getElementById('news-source-label');
         if (label) label.textContent = 'Fetching latest AI & ML news…';
         runDemo('news'); runDemo('research'); runDemo('tasks'); runDemo('schedule');
-        // github/slack/email open externally — no fetch needed
+        return;
+    }
+    // Integration panes fetch from real APIs
+    if (['github','slack','gmail','email'].includes(type)) {
+        const paneId = type === 'email' ? 'gmail' : type;
+        switchIntel(paneId, btn);
+        if (window.fetchIntegrationPane) window.fetchIntegrationPane(type === 'email' ? 'gmail' : type);
         return;
     }
     switchIntel(type, btn);

@@ -75,16 +75,16 @@ async def lifespan(app: FastAPI):
     from backend.agents.news_agent import NewsAgent
     from backend.agents.debate_engine import MultiAgentDebateEngine
     from backend.agents.proactive_monitor_agent import ProactiveMonitorAgent
-    from backend.services.github_service import create_github_service
-    from backend.services.slack_service import create_slack_service
-    from backend.services.email_service import create_email_service
+    from backend.services.github_service import GitHubService
+    from backend.services.slack_service import SlackService
+    from backend.services.email_service import EmailService
 
     state.critic_agent     = CriticAgent(state.llm_service, state.knowledge_graph, state.pubsub_service)
     state.security_auditor = AuditorAgent(state.llm_service, state.knowledge_graph)
     state.orchestrator     = OrchestratorAgent(state.llm_service, state.critic_agent, state.knowledge_graph, state.pubsub_service)
-    state.github_service   = create_github_service()
-    state.slack_service    = create_slack_service()
-    state.email_service    = create_email_service()
+    state.github_service   = GitHubService()
+    state.slack_service    = SlackService()
+    state.email_service    = EmailService()
     state.veda_librarian   = LibrarianAgent(state.llm_service)
     state.param_mitra      = ParamMitraAgent(state.llm_service)
 
