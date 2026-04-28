@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import bcrypt
 from backend.database import (
-    init_db, get_session,
+    init_db, get_session, get_engine,
     User, Task, Note, CalendarEvent, Book,
     WorkflowHistory, WorkflowState, CriticDecision,
 )
