@@ -136,7 +136,7 @@ html.dark ::-webkit-scrollbar-thumb { background: var(--md-surface-3); }
   border: none; background: none; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
   color: var(--md-muted); transition: background 0.15s, color 0.15s !important;
-  position: relative; overflow: hidden;
+  position: relative;
 }
 .theme-toggle:hover { background: var(--md-surface-1); color: var(--g-blue); }
 .theme-toggle .icon-sun,
@@ -150,6 +150,16 @@ html.dark ::-webkit-scrollbar-thumb { background: var(--md-surface-3); }
 /* Dark mode: show moon, hide sun */
 html.dark .theme-toggle .icon-sun  { transform: rotate(-90deg) scale(0); opacity: 0; }
 html.dark .theme-toggle .icon-moon { transform: rotate(0deg) scale(1); opacity: 1; }
+/* Tooltip */
+.theme-toggle::after {
+  content: 'Toggle dark mode';
+  position: absolute; bottom: -30px; left: 50%; transform: translateX(-50%);
+  background: var(--md-on-surface); color: var(--md-surface);
+  font-size: 10px; font-family: var(--font-mono); white-space: nowrap;
+  padding: 3px 8px; border-radius: 4px; pointer-events: none;
+  opacity: 0; transition: opacity 0.15s; z-index: 200;
+}
+.theme-toggle:hover::after { opacity: 1; }
 
 
 
@@ -2132,7 +2142,7 @@ html.dark .completion-toast { box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1p
         <span class="ms">notifications</span>
         <div class="notif-dot" id="notifDot"></div>
       </button>
-      <button class="theme-toggle" id="themeToggle" title="Toggle dark mode" onclick="toggleTheme()">
+      <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">
         <span class="ms icon-sun">light_mode</span>
         <span class="ms icon-moon">dark_mode</span>
       </button>
