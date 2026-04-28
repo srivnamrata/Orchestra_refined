@@ -48,21 +48,49 @@ class MockLLMService(LLMService):
 class GoogleAIStudioLLMService(LLMService):
     """Uses google-genai SDK with a Gemini API key — no Vertex AI quota needed."""
 
+    # Models to try in order — google-genai uses bare model IDs
+    MODELS = [
+        "gemini-2.0-flash",
+        "gemini-2.0-flash-lite",
+        "gemini-1.5-flash",
+        "gemini-1.5-flash-8b",
+        "gemini-1.5-pro",
+    ]
+
     def __init__(self, api_key: str, model: str = "gemini-2.0-flash"):
         from google import genai
-        self.client = genai.Client(api_key=api_key)
-        self.model  = model
-        logger.info(f"✅ Google AI Studio LLM: {model}")
+        self.client    = genai.Client(api_key=api_key)
+        # Normalise model name — strip "models/" prefix if present, use bare ID
+        self.model     = model.replace("models/", "").split("/")[-1]
+        # If passed an unknown name, fall back to flash
+        if self.model not in self.MODELS and not self.model.startswith("gemini"):
+            self.model = "gemini-2.0-flash"
+        logger.info(f"✅ Google AI Studio LLM: {self.model}")
 
     async def call(self, prompt: str, **kwargs) -> str:
         import asyncio
-        loop = asyncio.get_event_loop()
-        # google-genai is sync; run in executor to avoid blocking
-        response = await loop.run_in_executor(
-            None,
-            lambda: self.client.models.generate_content(model=self.model, contents=prompt)
-        )
-        return response.text
+        loop     = asyncio.get_event_loop()
+        models   = [self.model] + [m for m in self.MODELS if m != self.model]
+        last_err = None
+        for model in models:
+            try:
+                response = await loop.run_in_executor(
+                    None,
+                    lambda m=model: self.client.models.generate_content(
+                        model=m, contents=prompt)
+                )
+                if model != self.model:
+                    logger.info(f"✅ Switched to working AI Studio model: {model}")
+                    self.model = model
+                return response.text
+            except Exception as e:
+                err = str(e)
+                if any(k in err for k in ["404", "not found", "INVALID_ARGUMENT", "invalid"]):
+                    logger.warning(f"⚠️  AI Studio model {model} failed, trying next…")
+                    last_err = e
+                    continue
+                raise
+        raise last_err
 
 
 class VertexAILLMService(LLMService):
