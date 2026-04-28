@@ -35,6 +35,7 @@ export async function connectIntegration(service) {
         }
         activityFeed.log(`✅ ${service.charAt(0).toUpperCase()+service.slice(1)} connected`, 'success', 'SYSTEM');
         setConnected(service, true);
+        refreshNavBadge();
     } catch (e) {
         alert(`Could not connect ${service}: ${e.message}`);
     }
@@ -45,6 +46,19 @@ export async function disconnectIntegration(service) {
     await apiFetch(`/api/integrations/${service}/connect`, { method: 'DELETE' });
     setConnected(service, false);
     activityFeed.log(`${service} disconnected`, 'status', 'SYSTEM');
+    refreshNavBadge();
+}
+
+function refreshNavBadge() {
+    if (window.loadIntegrationStatuses) window.loadIntegrationStatuses();
+    apiFetch('/api/integrations/status').then(r => r.ok ? r.json() : null).then(data => {
+        if (!data) return;
+        const count = Object.values(data).filter(s => s.connected).length;
+        const badge = document.getElementById('int-nav-badge');
+        if (!badge) return;
+        badge.textContent = count + '/3';
+        badge.className = count === 0 ? 'nav-badge nb-gray' : count < 3 ? 'nav-badge nb-amber' : 'nav-badge nb-green';
+    }).catch(() => {});
 }
 
 function setConnected(service, connected) {

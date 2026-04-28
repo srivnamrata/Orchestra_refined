@@ -2088,7 +2088,7 @@ html.dark .completion-toast { box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1p
     <div class="nav-item" onclick="window.open('https://github.com','_blank')"><span class="ms">code</span> GitHub <span class="nav-badge nb-gray">↗</span></div>
     <div class="nav-item" onclick="window.open('https://app.slack.com','_blank')"><span class="ms">forum</span> Slack <span class="nav-badge nb-gray">↗</span></div>
     <div class="nav-item" onclick="window.open('https://mail.google.com','_blank')"><span class="ms">mail</span> Gmail <span class="nav-badge nb-gray">↗</span></div>
-    <div class="nav-item" data-view="integrations-settings" onclick="window.switchView('integrations-settings')"><span class="ms">cable</span> Integrations</div>
+    <div class="nav-item" data-view="integrations-settings" onclick="window.switchView('integrations-settings')"><span class="ms">cable</span> Integrations <span class="nav-badge nb-gray" id="int-nav-badge">0/3</span></div>
 
   </nav>
 
@@ -3073,6 +3073,29 @@ html.dark .completion-toast { box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1p
       localStorage.setItem('orch-user', JSON.stringify(user));
     })
     .catch(() => { /* network error — stay logged in using cached data */ });
+})();
+
+// Update integrations badge with live connection count
+(function() {
+    const token = localStorage.getItem('orch-session-token');
+    if (!token) return;
+    fetch('/api/integrations/status', { headers: { 'X-Session-Token': token } })
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+            if (!data) return;
+            const connected = Object.values(data).filter(s => s.connected).length;
+            const badge = document.getElementById('int-nav-badge');
+            if (!badge) return;
+            badge.textContent = connected + '/3';
+            if (connected === 0) {
+                badge.className = 'nav-badge nb-gray';
+            } else if (connected < 3) {
+                badge.className = 'nav-badge nb-amber';
+            } else {
+                badge.className = 'nav-badge nb-green';
+            }
+        })
+        .catch(() => {});
 })();
 
 window.orchestraLogout = function() {
