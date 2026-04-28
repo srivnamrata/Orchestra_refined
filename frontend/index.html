@@ -806,7 +806,7 @@ html.dark .qchip {
 .g-btn.white:hover { box-shadow: var(--shadow-2); transform: translateY(-1px); }
 
 /* ── Stats row (Google Cards) ── */
-.stats-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; flex-shrink: 0; }
+.stats-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; flex-shrink: 0; }
 .stat-card {
   background: var(--md-surface);
   border-radius: var(--radius-lg);
@@ -2189,13 +2189,13 @@ html.dark .completion-toast { box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1p
 
     <!-- Stats -->
     <div class="stats-row anim a2">
-      <div class="stat-card">
+      <div class="stat-card" id="stat-active-wf" onclick="window.switchView('workflows')" style="cursor:pointer" title="View active workflows">
         <div class="sc-icon-row">
-          <div class="sc-icon" style="background:var(--g-green-light)"><span class="ms" style="color:var(--g-green)">task_alt</span></div>
-          <span class="sc-trend trend-up">↑ 18%</span>
+          <div class="sc-icon" style="background:var(--g-amber-light)"><span class="ms" style="color:var(--g-amber)">account_tree</span></div>
+          <span class="sc-trend trend-nt" id="active-wf-trend">+2 this week</span>
         </div>
-        <div class="sc-num" style="color:var(--g-green)">247</div>
-        <div class="sc-lbl">Tasks Completed</div>
+        <div class="sc-num" style="color:var(--g-amber)" id="active-count">—</div>
+        <div class="sc-lbl">Active Workflows</div>
       </div>
       <div class="stat-card">
         <div class="sc-icon-row">
@@ -2212,14 +2212,6 @@ html.dark .completion-toast { box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1p
         </div>
         <div class="sc-num" style="color:var(--g-violet)">83h</div>
         <div class="sc-lbl">Time Saved</div>
-      </div>
-      <div class="stat-card">
-        <div class="sc-icon-row">
-          <div class="sc-icon" style="background:var(--g-amber-light)"><span class="ms" style="color:var(--g-amber)">account_tree</span></div>
-          <span class="sc-trend trend-nt">+2 this week</span>
-        </div>
-        <div class="sc-num" style="color:var(--g-amber)" id="active-count">3</div>
-        <div class="sc-lbl">Active Workflows</div>
       </div>
     </div>
 
@@ -3134,6 +3126,24 @@ html.dark .completion-toast { box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1p
       localStorage.setItem('orch-user', JSON.stringify(user));
     })
     .catch(() => { /* network error — stay logged in using cached data */ });
+})();
+
+// Load Active Workflows count from real task data
+(function() {
+    const token = localStorage.getItem('orch-session-token');
+    if (!token) return;
+    fetch('/api/tasks', { headers: { 'X-Session-Token': token } })
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+            if (!data) return;
+            const tasks      = data.tasks || [];
+            const inProgress = tasks.filter(t => t.status === 'in_progress').length;
+            const el = document.getElementById('active-count');
+            if (el) el.textContent = inProgress || '0';
+            const trend = document.getElementById('active-wf-trend');
+            if (trend) trend.textContent = inProgress > 0 ? `${inProgress} running` : 'none running';
+        })
+        .catch(() => {});
 })();
 
 // Update integrations badge with live connection count
