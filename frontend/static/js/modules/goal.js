@@ -1,6 +1,6 @@
 import { apiUrl, apiFetch } from './api.js';
 import { activityFeed } from './feed.js';
-import { renderNews, renderResearch, renderStatusOverview } from './renderers.js';
+import { renderNews, renderResearch, renderStatusOverview, renderAuditReport } from './renderers.js';
 
 let _nlActiveStream = null;
 
@@ -62,6 +62,8 @@ export async function submitGoal() {
                     const payload = JSON.parse(data);
                     if (event === 'activity') {
                         activityFeed.log(payload.message, payload.type || 'info', payload.category || 'agent', payload.widget);
+                    } else if (event === 'render-audit') {
+                        renderAuditReport(payload);
                     } else if (event === 'render-status') {
                         renderStatusOverview(payload);
                     } else if (event === 'render-news') {

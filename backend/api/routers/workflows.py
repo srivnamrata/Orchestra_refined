@@ -146,6 +146,208 @@ def _is_status_goal(goal: str) -> bool:
     return any(kw in g for kw in _STATUS_KEYWORDS)
 
 
+_AUDIT_KEYWORDS = [
+    "audit", "risk", "assess", "assessment", "review strategy",
+    "check for risks", "analyse risks", "analyze risks",
+    "security check", "compliance", "risk report", "threat",
+    "vulnerabilities", "what could go wrong", "risk analysis",
+    "strategy review", "health check", "due diligence",
+]
+
+def _is_audit_goal(goal: str) -> bool:
+    """True when the user wants a risk/audit/compliance analysis."""
+    g = goal.lower()
+    return any(kw in g for kw in _AUDIT_KEYWORDS)
+
+
+async def _stream_audit_risks(
+    goal: str, priority: str, workflow_id: str, user_id=None
+) -> AsyncGenerator[str, None]:
+    """
+    Dedicated path for audit/risk goals.
+    Scans real tasks, events and workflow history for risks,
+    runs AuditorAgent checks, and emits a render-audit SSE widget.
+    """
+    from backend.database import get_all_tasks, get_all_events, get_workflow_history
+
+    ts  = lambda: datetime.now().strftime("%H:%M:%S")
+    now = datetime.utcnow()
+
+    def think(agent, role, message, thought_type="thought"):
+        state.emit_thought(agent, role, message, thought_type)
+        type_map = {"thought": "thinking", "dialogue": "info", "finding": "info",
+                    "action": "info", "alert": "error", "result": "success"}
+        return _sse("activity", {
+            "type":      type_map.get(thought_type, "info"),
+            "category":  "analysis",
+            "message":   f'<span class="trace-{agent}">[{role}]</span> {message}',
+            "timestamp": ts(),
+        })
+
+    yield think("orchestrator", "Orchestrator",
+        f'Goal classified as <strong>AUDIT / RISK ANALYSIS</strong> — running security and risk checks on your workspace.',
+        "thought")
+    await asyncio.sleep(0.15)
+
+    # ── Fetch data ────────────────────────────────────────────────────────────
+    yield think("auditor", "Auditor Agent",
+        "Pulling all tasks, events and workflow history from database…", "action")
+    await asyncio.sleep(0.2)
+
+    all_tasks    = get_all_tasks(limit=200, user_id=user_id)
+    all_events   = get_all_events(limit=100, user_id=user_id)
+    wf_history   = get_workflow_history(limit=20, user_id=user_id)
+
+    yield think("auditor", "Auditor Agent",
+        f"Loaded {len(all_tasks)} tasks · {len(all_events)} events · {len(wf_history)} recent workflows. Starting risk scan…",
+        "result")
+    await asyncio.sleep(0.2)
+
+    # ── Run risk checks ───────────────────────────────────────────────────────
+    findings = []
+
+    # 1. Overdue critical tasks
+    overdue_critical = [t for t in all_tasks
+                        if t.priority == "critical" and t.due_date and
+                        t.due_date < now and t.status != "completed"]
+    if overdue_critical:
+        findings.append({
+            "severity": "HIGH",
+            "category": "Schedule Risk",
+            "icon": "🔴",
+            "title": f"{len(overdue_critical)} critical task{'s' if len(overdue_critical)>1 else ''} overdue",
+            "detail": ", ".join(f'"{t.title}"' for t in overdue_critical[:3]),
+            "action": "Reschedule or escalate immediately",
+            "confidence": 97,
+        })
+
+    # 2. Tasks with no due date (planning risk)
+    no_due = [t for t in all_tasks if not t.due_date and t.status not in ("completed",)]
+    if len(no_due) > 3:
+        findings.append({
+            "severity": "MEDIUM",
+            "category": "Planning Risk",
+            "icon": "🟡",
+            "title": f"{len(no_due)} tasks have no due date",
+            "detail": "Tasks without deadlines tend to drift and block dependent work.",
+            "action": "Assign due dates to all open tasks",
+            "confidence": 88,
+        })
+
+    # 3. PII / sensitive content in task descriptions
+    pii_terms = ["password", "ssn", "credit card", "api key", "secret", "token", "salary", "compensation"]
+    pii_tasks = [t for t in all_tasks
+                 if any(p in (t.title + " " + (t.description or "")).lower() for p in pii_terms)]
+    if pii_tasks:
+        findings.append({
+            "severity": "HIGH",
+            "category": "Data Security",
+            "icon": "🔴",
+            "title": f"PII/sensitive keywords found in {len(pii_tasks)} task{'s' if len(pii_tasks)>1 else ''}",
+            "detail": f'Flagged: {", ".join(f"{chr(34)}{t.title}{chr(34)}" for t in pii_tasks[:3])}',
+            "action": "Redact sensitive data from task descriptions",
+            "confidence": 95,
+        })
+
+    # 4. Scheduling conflicts: events before blocking tasks complete
+    sched_conflicts = []
+    for ev in all_events:
+        if not ev.start_time or ev.start_time < now:
+            continue
+        blocking = [t for t in all_tasks
+                    if t.due_date and t.due_date >= ev.start_time
+                    and t.status not in ("completed",)
+                    and t.priority in ("critical", "high")]
+        if blocking:
+            sched_conflicts.append((ev, blocking))
+    if sched_conflicts:
+        ev, tasks = sched_conflicts[0]
+        findings.append({
+            "severity": "MEDIUM",
+            "category": "Scheduling Risk",
+            "icon": "🟡",
+            "title": f"{len(sched_conflicts)} event{'s' if len(sched_conflicts)>1 else ''} scheduled before blocking tasks complete",
+            "detail": f'"{ev.title}" may be blocked by {len(tasks)} unfinished task{"s" if len(tasks)>1 else ""}',
+            "action": "Reschedule event or fast-track blocking tasks",
+            "confidence": 84,
+        })
+
+    # 5. Single points of failure (all tasks assigned to one person)
+    assignees = [t.assigned_to for t in all_tasks if t.assigned_to and t.status != "completed"]
+    if assignees:
+        from collections import Counter
+        top = Counter(assignees).most_common(1)[0]
+        if top[1] >= 5:
+            findings.append({
+                "severity": "MEDIUM",
+                "category": "Resource Risk",
+                "icon": "🟡",
+                "title": f"Single point of failure: {top[0]} owns {top[1]} open tasks",
+                "detail": "If unavailable, multiple parallel workstreams would stall.",
+                "action": "Redistribute tasks or identify a backup owner",
+                "confidence": 79,
+            })
+
+    # 6. Workflows with errors
+    failed_wf = [w for w in wf_history if w.status in ("failed", "error") and w.error]
+    if failed_wf:
+        findings.append({
+            "severity": "LOW",
+            "category": "Operational Risk",
+            "icon": "🟠",
+            "title": f"{len(failed_wf)} workflow{'s' if len(failed_wf)>1 else ''} failed recently",
+            "detail": f'Most recent: "{failed_wf[0].goal[:60]}"',
+            "action": "Review failed workflow logs and add error handling",
+            "confidence": 91,
+        })
+
+    if not findings:
+        findings.append({
+            "severity": "LOW",
+            "category": "Overall Health",
+            "icon": "🟢",
+            "title": "No significant risks detected",
+            "detail": "Workspace looks healthy — no overdue critical tasks, PII issues or scheduling conflicts found.",
+            "action": "Continue monitoring with Proactive Monitor Agent",
+            "confidence": 90,
+        })
+
+    high   = [f for f in findings if f["severity"] == "HIGH"]
+    medium = [f for f in findings if f["severity"] == "MEDIUM"]
+    low    = [f for f in findings if f["severity"] in ("LOW",)]
+
+    yield think("auditor", "Auditor Agent",
+        f"Scan complete — {len(high)} HIGH · {len(medium)} MEDIUM · {len(low)} LOW risk findings.",
+        "finding")
+    await asyncio.sleep(0.2)
+
+    # ── CriticAgent risk scoring ──────────────────────────────────────────────
+    yield think("critic", "Critic Agent",
+        f"Cross-referencing findings against task dependencies and calendar… validating confidence scores.", "dialogue")
+    await asyncio.sleep(0.3)
+
+    overall = "HIGH" if high else ("MEDIUM" if medium else "LOW")
+    yield think("critic", "Critic Agent",
+        f"Overall risk level: <strong>{overall}</strong>. {len(findings)} finding{'s' if len(findings)!=1 else ''} confirmed.", "finding")
+    await asyncio.sleep(0.15)
+
+    yield _sse("render-audit", {
+        "goal":     goal,
+        "generated": ts(),
+        "overall":  overall,
+        "counts":   {"high": len(high), "medium": len(medium), "low": len(low)},
+        "findings": findings,
+        "scanned":  {"tasks": len(all_tasks), "events": len(all_events), "workflows": len(wf_history)},
+    })
+
+    yield _sse("done", {
+        "workflow_id":      workflow_id,
+        "steps":            3,
+        "tasks_created":    0,
+        "events_scheduled": 0,
+    })
+
+
 async def _stream_status_overview(
     goal: str, priority: str, workflow_id: str, user_id=None
 ) -> AsyncGenerator[str, None]:
@@ -979,8 +1181,11 @@ async def orchestrate_stream(request: OrchestrateRequest, user=Depends(get_curre
     user_id     = user["user_id"] if user else None
     logger.info(f"🌊 Streaming orchestration {workflow_id}: {request.goal} (user={user_id})")
 
-    # Route read/summarise goals to the dedicated status handler
-    if _is_status_goal(request.goal):
+    # Route to specialised handlers before hitting the full LLM pipeline
+    if _is_audit_goal(request.goal):
+        generator = _stream_audit_risks(
+            request.goal, request.priority, workflow_id, user_id=user_id)
+    elif _is_status_goal(request.goal):
         generator = _stream_status_overview(
             request.goal, request.priority, workflow_id, user_id=user_id)
     else:

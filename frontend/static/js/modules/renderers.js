@@ -1,5 +1,69 @@
 // Pure DOM-rendering functions — no external module imports.
 
+export function renderAuditReport(data) {
+    const feed = document.getElementById('feed');
+    if (!feed) return;
+
+    const counts  = data.counts  || {};
+    const overall = data.overall || 'LOW';
+    const scanned = data.scanned || {};
+
+    const sevColor = { HIGH: 'var(--g-red)', MEDIUM: 'var(--g-amber)', LOW: 'var(--g-green)' };
+    const sevBg    = { HIGH: 'var(--g-red-light)', MEDIUM: 'var(--g-amber-light)', LOW: 'var(--g-green-light)' };
+    const overallColor = sevColor[overall] || 'var(--md-dim)';
+
+    const findingCard = (f) => `
+        <div style="border:1px solid ${sevColor[f.severity]||'var(--md-surface-3)'};border-radius:10px;padding:12px 14px;margin-bottom:10px;background:${sevBg[f.severity]||'var(--md-surface-1)'}20">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+                <span style="font-size:16px">${f.icon}</span>
+                <span style="font-size:12px;font-weight:700;color:${sevColor[f.severity]}">${f.severity}</span>
+                <span style="font-size:10px;color:var(--md-dim);font-family:var(--font-mono)">${f.category}</span>
+                <span style="margin-left:auto;font-size:10px;color:var(--md-dim);font-family:var(--font-mono)">${f.confidence}% confidence</span>
+            </div>
+            <div style="font-size:13px;font-weight:600;color:var(--md-on-surface);margin-bottom:4px">${f.title}</div>
+            <div style="font-size:11px;color:var(--md-dim);margin-bottom:8px;line-height:1.5">${f.detail}</div>
+            <div style="display:flex;align-items:center;gap:6px;font-size:11px">
+                <span class="ms" style="font-size:14px;color:${sevColor[f.severity]}">arrow_forward</span>
+                <span style="color:var(--md-on-surface);font-weight:500">${f.action}</span>
+            </div>
+        </div>`;
+
+    const card = document.createElement('div');
+    card.className = 'run-card';
+    card.style.cssText = `margin:8px 0;border-top:3px solid ${overallColor}`;
+    card.innerHTML = `
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+            <span class="ms" style="color:${overallColor};font-size:22px">security</span>
+            <div style="flex:1">
+                <div style="font-weight:700;font-size:13px">Risk & Audit Report</div>
+                <div style="font-size:11px;color:var(--md-dim)">Scanned ${scanned.tasks||0} tasks · ${scanned.events||0} events · ${scanned.workflows||0} workflows · ${data.generated||''}</div>
+            </div>
+            <div style="text-align:center;padding:8px 14px;border-radius:10px;background:${sevBg[overall]||'var(--md-surface-2)'}">
+                <div style="font-size:18px;font-weight:800;color:${overallColor}">${overall}</div>
+                <div style="font-size:9px;color:${overallColor};font-weight:700;letter-spacing:.5px">OVERALL RISK</div>
+            </div>
+        </div>
+
+        <!-- Severity summary -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px">
+            ${[
+                {label:'High Risk',   val:counts.high||0,   color:'var(--g-red)',   bg:'var(--g-red-light)'},
+                {label:'Medium Risk', val:counts.medium||0, color:'var(--g-amber)', bg:'var(--g-amber-light)'},
+                {label:'Low / Info',  val:counts.low||0,    color:'var(--g-green)', bg:'var(--g-green-light)'},
+            ].map(s => `
+                <div style="text-align:center;padding:8px;border-radius:10px;background:${s.bg}">
+                    <div style="font-size:24px;font-weight:800;color:${s.color}">${s.val}</div>
+                    <div style="font-size:9px;color:${s.color};font-weight:600;letter-spacing:.3px">${s.label.toUpperCase()}</div>
+                </div>`).join('')}
+        </div>
+
+        <!-- Findings -->
+        <div style="font-size:10px;font-weight:700;color:var(--md-dim);letter-spacing:.5px;margin-bottom:10px">FINDINGS</div>
+        ${(data.findings||[]).map(findingCard).join('')}`;
+
+    feed.prepend(card);
+}
+
 export function renderStatusOverview(data) {
     const feed = document.getElementById('feed');
     if (!feed) return;
