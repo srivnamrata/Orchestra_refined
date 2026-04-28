@@ -1115,6 +1115,8 @@ html.dark .workflow-empty-state { background: rgba(28,27,32,0.35); }
   background: var(--md-surface);
   box-shadow: var(--shadow-1);
   animation: activityCardIn 0.22s ease-out;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
 }
 html.dark .feed-body#action-output .activity-item {
   background: var(--md-surface);
@@ -1126,6 +1128,10 @@ html.dark .feed-body#action-output .activity-item {
 .feed-body#action-output .activity-item.type-error { border-left: 4px solid var(--g-red); }
 .feed-body#action-output .activity-item.type-thinking { border-left: 4px solid var(--g-violet); }
 .feed-body#action-output .activity-item.type-status { border-left: 4px solid var(--g-amber); }
+.feed-body#action-output .activity-item:hover {
+  background: var(--md-surface-1);
+  transform: translateY(-1px);
+}
 .feed-body#action-output .activity-content { min-width: 0; }
 .feed-body#action-output .activity-badge {
   display: inline-flex;
@@ -3232,10 +3238,23 @@ html.dark .completion-toast { box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1p
             if (!data) return;
             const tasks      = data.tasks || [];
             const inProgress = tasks.filter(t => t.status === 'in_progress').length;
+            const completed  = tasks.filter(t => t.status === 'completed').length;
             const el = document.getElementById('active-count');
             if (el) el.textContent = inProgress || '0';
             const trend = document.getElementById('active-wf-trend');
             if (trend) trend.textContent = inProgress > 0 ? `${inProgress} running` : 'none running';
+            
+            const atsRun = document.getElementById('ats-run');
+            if (atsRun) atsRun.textContent = `${inProgress} running`;
+            
+            const gSub = document.querySelector('.g-sub');
+            if (gSub) gSub.textContent = `${inProgress} workflows active · 1 pending debate · ${completed} tasks completed`;
+            
+            const wfBadge = document.querySelector('.nav-item[data-view="workflows"] .nav-badge');
+            if (wfBadge) wfBadge.textContent = inProgress || '0';
+            
+            const ahBadge = document.querySelector('.ah-badge');
+            if (ahBadge) ahBadge.textContent = `${inProgress} active`;
         })
         .catch(() => {});
 })();
