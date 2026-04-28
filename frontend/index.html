@@ -2555,83 +2555,133 @@ html.dark .completion-toast { box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1p
     </div> <!-- /#dashboard -->
 
     <div id="agents" class="view">
-      <div class="workflows-container" style="padding:24px">
-        <div class="view-header" style="margin-bottom:20px">
-          <h2 style="color:var(--md-on-surface)">🤖 Agent Health</h2>
-          <p style="color:var(--md-dim)">Live status, task load, and performance metrics for all active agents.</p>
+      <div class="workflows-container" style="padding:24px;max-width:1100px;margin:0 auto">
+        <div class="view-header" style="margin-bottom:24px">
+          <h2 style="color:var(--md-on-surface)">Agent Health</h2>
+          <p style="color:var(--md-dim)">Live status, load, and performance metrics for all active agents.</p>
         </div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px">
+
+        <!-- Active agents — uniform 3-column grid -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:16px">
 
           <div class="run-card" style="border-top:3px solid var(--g-green-mid)">
             <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
               <div class="ah-icon" style="background:var(--g-green-light)"><span class="ms" style="color:var(--g-green)">hub</span></div>
-              <div style="flex:1"><div class="run-title">Orchestrator</div><div class="ah-task">Coordinating 3 active workflows</div></div>
-              <span class="ah-badge-sm" style="background:var(--g-green-light);color:var(--g-green)">running</span>
+              <div style="flex:1;min-width:0"><div class="run-title">Orchestrator</div><div class="ah-task">Coordinating 3 active workflows</div></div>
+              <span class="ah-badge-sm" style="background:var(--g-green-light);color:var(--g-green);flex-shrink:0">running</span>
             </div>
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
               <div class="ah-bar-bg" style="flex:1;height:6px"><div class="ah-bar-fill" style="width:72%;height:100%;background:var(--g-green-mid)"></div></div>
               <span class="ah-pct">72%</span>
             </div>
-            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
-              <span class="chip">Tasks: 3</span><span class="chip">Avg latency: 1.2s</span><span class="chip">Uptime: 99.8%</span>
-            </div>
-          </div>
-
-          <div class="run-card" style="border-top:3px solid var(--g-blue)">
-            <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
-              <div class="ah-icon" style="background:var(--g-blue-light)"><span class="ms" style="color:var(--g-blue)">travel_explore</span></div>
-              <div style="flex:1"><div class="run-title">Researcher</div><div class="ah-task">API schema scanning…</div></div>
-              <span class="ah-badge-sm" style="background:var(--g-green-light);color:var(--g-green)">running</span>
-            </div>
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-              <div class="ah-bar-bg" style="flex:1;height:6px"><div class="ah-bar-fill" style="width:55%;height:100%;background:var(--g-blue)"></div></div>
-              <span class="ah-pct">55%</span>
-            </div>
-            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
-              <span class="chip">Queries: 12</span><span class="chip">Cache hit: 68%</span><span class="chip">Sources: 4</span>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <span class="chip">Tasks: 3</span><span class="chip">Latency: 1.2s</span><span class="chip">Uptime: 99.8%</span>
             </div>
           </div>
 
           <div class="run-card" style="border-top:3px solid var(--g-amber)">
             <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
               <div class="ah-icon" style="background:var(--g-amber-light)"><span class="ms" style="color:var(--g-amber)">rate_review</span></div>
-              <div style="flex:1"><div class="run-title">Critic</div><div class="ah-task">3 workflow reviews queued</div></div>
-              <span class="ah-badge-sm" style="background:var(--g-amber-light);color:var(--g-amber)">busy</span>
+              <div style="flex:1;min-width:0"><div class="run-title">Critic</div><div class="ah-task">3 workflow reviews queued</div></div>
+              <span class="ah-badge-sm" style="background:var(--g-amber-light);color:var(--g-amber);flex-shrink:0">busy</span>
             </div>
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
               <div class="ah-bar-bg" style="flex:1;height:6px"><div class="ah-bar-fill" style="width:88%;height:100%;background:var(--g-amber)"></div></div>
               <span class="ah-pct">88%</span>
             </div>
-            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
-              <span class="chip">Reviews: 3 queued</span><span class="chip">Flags: 2</span><span class="chip">Replans: 1</span>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <span class="chip">Reviews: 3</span><span class="chip">Flags: 2</span><span class="chip">Replans: 1</span>
             </div>
           </div>
 
           <div class="run-card" style="border-top:3px solid var(--g-teal)">
             <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
               <div class="ah-icon" style="background:var(--g-teal-light)"><span class="ms" style="color:var(--g-teal)">security</span></div>
-              <div style="flex:1"><div class="run-title">Auditor</div><div class="ah-task">Monitoring all agent actions</div></div>
-              <span class="ah-badge-sm" style="background:var(--g-green-light);color:var(--g-green)">running</span>
+              <div style="flex:1;min-width:0"><div class="run-title">Auditor</div><div class="ah-task">Monitoring all agent actions</div></div>
+              <span class="ah-badge-sm" style="background:var(--g-green-light);color:var(--g-green);flex-shrink:0">running</span>
             </div>
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
               <div class="ah-bar-bg" style="flex:1;height:6px"><div class="ah-bar-fill" style="width:40%;height:100%;background:var(--g-teal)"></div></div>
               <span class="ah-pct">40%</span>
             </div>
-            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
               <span class="chip">Checks: 47</span><span class="chip">Blocked: 0</span><span class="chip">PII flags: 0</span>
             </div>
           </div>
 
-          <div class="run-card" style="border-top:3px solid var(--md-surface-2);opacity:0.5">
+          <div class="run-card" style="border-top:3px solid var(--g-blue)">
             <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
-              <div class="ah-icon" style="background:var(--md-surface-1)"><span class="ms" style="color:var(--md-dim)">code</span></div>
-              <div style="flex:1"><div class="run-title">GitHub</div><div class="ah-task">Not connected</div></div>
-              <span class="ah-badge-sm" style="background:var(--md-surface-2);color:var(--md-muted)">stub</span>
+              <div class="ah-icon" style="background:var(--g-blue-light)"><span class="ms" style="color:var(--g-blue)">travel_explore</span></div>
+              <div style="flex:1;min-width:0"><div class="run-title">Researcher</div><div class="ah-task">Fetching live papers &amp; news</div></div>
+              <span class="ah-badge-sm" style="background:var(--g-green-light);color:var(--g-green);flex-shrink:0">running</span>
             </div>
-            <p style="font-size:11px;color:var(--md-dim)">Connect GitHub in the integration settings to enable PR monitoring, CI alerts, and code review automation.</p>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+              <div class="ah-bar-bg" style="flex:1;height:6px"><div class="ah-bar-fill" style="width:55%;height:100%;background:var(--g-blue)"></div></div>
+              <span class="ah-pct">55%</span>
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <span class="chip">Queries: 12</span><span class="chip">Cache: 68%</span><span class="chip">Sources: 4</span>
+            </div>
+          </div>
+
+          <div class="run-card" style="border-top:3px solid var(--g-violet)">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+              <div class="ah-icon" style="background:var(--g-violet-light)"><span class="ms" style="color:var(--g-violet)">self_improvement</span></div>
+              <div style="flex:1;min-width:0"><div class="run-title">Param Mitra</div><div class="ah-task">Weekly coaching ready</div></div>
+              <span class="ah-badge-sm" style="background:var(--g-green-light);color:var(--g-green);flex-shrink:0">running</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+              <div class="ah-bar-bg" style="flex:1;height:6px"><div class="ah-bar-fill" style="width:30%;height:100%;background:var(--g-violet)"></div></div>
+              <span class="ah-pct">30%</span>
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <span class="chip">Vibe: 72%</span><span class="chip">Insights: 4</span><span class="chip">Coaching: on</span>
+            </div>
+          </div>
+
+          <div class="run-card" style="border-top:3px solid var(--g-green)">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+              <div class="ah-icon" style="background:var(--g-green-light)"><span class="ms" style="color:var(--g-green)">auto_stories</span></div>
+              <div style="flex:1;min-width:0"><div class="run-title">Veda Librarian</div><div class="ah-task">Library indexed &amp; ready</div></div>
+              <span class="ah-badge-sm" style="background:var(--g-green-light);color:var(--g-green);flex-shrink:0">idle</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+              <div class="ah-bar-bg" style="flex:1;height:6px"><div class="ah-bar-fill" style="width:15%;height:100%;background:var(--g-green)"></div></div>
+              <span class="ah-pct">15%</span>
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <span class="chip">Books: 5</span><span class="chip">In progress: 2</span><span class="chip">Insights: on</span>
+            </div>
           </div>
 
         </div>
+
+        <!-- Inactive / not connected agents — full-width row -->
+        <div style="border-top:1px solid var(--md-surface-2);padding-top:16px">
+          <div style="font-size:10px;font-weight:700;color:var(--md-dim);letter-spacing:.8px;text-transform:uppercase;margin-bottom:12px">Not Connected</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+
+            <div class="run-card" style="opacity:0.55;display:flex;align-items:center;gap:12px;padding:12px 16px">
+              <div class="ah-icon" style="background:var(--md-surface-1);width:32px;height:32px"><span class="ms" style="color:var(--md-dim);font-size:16px">code</span></div>
+              <div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600">GitHub Agent</div><div class="ah-task">Connect via Integrations</div></div>
+              <button onclick="window.switchView('integrations-settings')" style="font-size:10px;padding:3px 10px;border:1px solid var(--md-surface-3);border-radius:100px;background:none;color:var(--md-muted);cursor:pointer;white-space:nowrap">Connect</button>
+            </div>
+
+            <div class="run-card" style="opacity:0.55;display:flex;align-items:center;gap:12px;padding:12px 16px">
+              <div class="ah-icon" style="background:var(--md-surface-1);width:32px;height:32px"><span class="ms" style="color:var(--md-dim);font-size:16px">forum</span></div>
+              <div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600">Slack Agent</div><div class="ah-task">Connect via Integrations</div></div>
+              <button onclick="window.switchView('integrations-settings')" style="font-size:10px;padding:3px 10px;border:1px solid var(--md-surface-3);border-radius:100px;background:none;color:var(--md-muted);cursor:pointer;white-space:nowrap">Connect</button>
+            </div>
+
+            <div class="run-card" style="opacity:0.55;display:flex;align-items:center;gap:12px;padding:12px 16px">
+              <div class="ah-icon" style="background:var(--md-surface-1);width:32px;height:32px"><span class="ms" style="color:var(--md-dim);font-size:16px">mail</span></div>
+              <div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600">Gmail Agent</div><div class="ah-task">Connect via Integrations</div></div>
+              <button onclick="window.switchView('integrations-settings')" style="font-size:10px;padding:3px 10px;border:1px solid var(--md-surface-3);border-radius:100px;background:none;color:var(--md-muted);cursor:pointer;white-space:nowrap">Connect</button>
+            </div>
+
+          </div>
+        </div>
+
       </div>
     </div>
 
