@@ -903,6 +903,37 @@ async def seed_demo_data():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+@router.post("/api/seed-user", tags=["Debug"])
+async def seed_user_data(reset: bool = False):
+    """Seed Namrata's full demo dataset into the production database."""
+    try:
+        import sys, json, uuid, bcrypt
+        from datetime import datetime, timedelta
+        from backend.database import (
+            init_db, get_session, User, Task, Note, CalendarEvent, Book,
+            WorkflowHistory, WorkflowState, CriticDecision,
+        )
+
+        # Re-use the seed module directly
+        import importlib.util, pathlib
+        spec = importlib.util.spec_from_file_location(
+            "seed_user_data",
+            pathlib.Path(__file__).parent.parent.parent / "backend" / "seed_user_data.py"
+        )
+        mod = importlib.util.module_from_spec(spec)
+        if reset:
+            sys.argv = ["seed", "--reset"]
+        else:
+            sys.argv = ["seed"]
+        spec.loader.exec_module(mod)
+        mod.seed()
+        sys.argv = []
+        return {"status": "success", "message": "User data seeded — srivnamrata@gmail.com ready"}
+    except Exception as e:
+        import traceback
+        raise HTTPException(status_code=500, detail=f"{e}\n{traceback.format_exc()}")
+
 @router.get("/api/integrations/github", tags=["Integrations"])
 @router.post("/api/integrations/github")
 async def get_github_intel():
