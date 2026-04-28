@@ -216,7 +216,6 @@ export function renderStatusOverview(data) {
             </div>
         </div>`;
 
-    // Prepend into the activity feed so it appears at the top (newest first)
     feed.prepend(card);
 }
 

@@ -38,6 +38,11 @@ export async function submitGoal() {
             body: JSON.stringify({ goal, priority }),
             signal: controller.signal,
         });
+        if (res.status === 401) {
+            activityFeed.log('🔒 Session expired — please <a href="/login" style="color:var(--g-blue)">log in again</a>.', 'error', 'SYSTEM');
+            localStorage.removeItem('orch-session-token');
+            return;
+        }
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
         const reader  = res.body.getReader();
@@ -63,11 +68,11 @@ export async function submitGoal() {
                     if (event === 'activity') {
                         activityFeed.log(payload.message, payload.type || 'info', payload.category || 'agent', payload.widget);
                     } else if (event === 'render-digest') {
-                        renderDigest(payload);
+                        try { renderDigest(payload); } catch(e) { activityFeed.log(`⚠️ Digest render error: ${e.message}`, 'error', 'SYSTEM'); }
                     } else if (event === 'render-audit') {
-                        renderAuditReport(payload);
+                        try { renderAuditReport(payload); } catch(e) { activityFeed.log(`⚠️ Audit render error: ${e.message}`, 'error', 'SYSTEM'); }
                     } else if (event === 'render-status') {
-                        renderStatusOverview(payload);
+                        try { renderStatusOverview(payload); } catch(e) { activityFeed.log(`⚠️ Status render error: ${e.message}`, 'error', 'SYSTEM'); }
                     } else if (event === 'render-news') {
                         renderNews(payload.articles || []);
                         const newsTab = document.querySelector('.intel-tab');
