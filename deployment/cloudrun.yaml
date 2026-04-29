@@ -12,14 +12,22 @@ spec:
     spec:
       containerConcurrency: 50
       containers:
-      - image: gcr.io/[YOUR-PROJECT-ID]/multi-agent-productivity:latest
+      - image: gcr.io/orchestra-updated/multi-agent-productivity:latest
         ports:
         - containerPort: 8000
         env:
         - name: ENVIRONMENT
           value: "production"
         - name: GCP_PROJECT_ID
-          value: "[YOUR-PROJECT-ID]"
+          value: "orchestra-updated"
+        - name: CLOUD_SQL_CONNECTION_NAME
+          value: "orchestra-updated:us-central1:orchestra-db"
+        - name: DB_USER
+          value: "postgres"
+        - name: DB_NAME
+          value: "orchestra"
+        - name: DB_PASSWORD
+          value: "Orchestra2026"
         - name: LLM_MODEL
           value: "gemini-1.5-pro"
         - name: USE_MOCK_LLM

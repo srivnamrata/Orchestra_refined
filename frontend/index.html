@@ -1507,7 +1507,6 @@ html.dark .completion-toast { box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1p
   <nav class="sidebar-nav">
     <div class="nav-label">Workspace</div>
     <div class="nav-item active"><span class="ms">home</span> Dashboard</div>
-    <div class="nav-item"><span class="ms">bolt</span> Active Workflows <span class="nav-badge nb-blue">3</span></div>
     <div class="nav-item"><span class="ms">task_alt</span> All Tasks <span class="nav-badge nb-gray">24</span></div>
     <div class="nav-item"><span class="ms">folder_open</span> Outputs</div>
     <div class="nav-label">Intelligence</div>
@@ -1626,7 +1625,7 @@ html.dark .completion-toast { box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1p
         <div class="sc-num" style="color:var(--g-violet)">83h</div>
         <div class="sc-lbl">Time Saved</div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card" style="cursor:pointer" onclick="window.open('trace.html','_blank')">
         <div class="sc-icon-row">
           <div class="sc-icon" style="background:var(--g-amber-light)"><span class="ms" style="color:var(--g-amber)">account_tree</span></div>
           <span class="sc-trend trend-nt">+2 this week</span>
@@ -1672,58 +1671,6 @@ html.dark .completion-toast { box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1p
 
       <!-- Left col -->
       <div class="runs-col">
-        <div class="sec-head"><div class="sec-title">Active Workflows</div><div class="sec-link">View all</div></div>
-
-        <div class="run-card live">
-          <div>
-            <div class="run-title">API Documentation Workflow</div>
-            <div class="run-meta">
-              <span class="run-tag tag-live"><span class="tag-dot" style="background:var(--g-green-mid)"></span>Live</span>
-              <span class="chip">Orchestrator</span><span class="chip">Researcher</span><span class="chip">Writer</span>
-              <span style="font-family:var(--font-mono);font-size:10px;color:var(--md-dim)">18m ago</span>
-            </div>
-            <div class="run-hint" id="hint1">Researcher → scanning API endpoint schemas…</div>
-            <div class="run-bar-bg"><div class="run-bar-fill" id="bar1" style="width:0%;background:var(--g-green-mid)"></div></div>
-          </div>
-          <div class="run-right">
-            <div class="run-pct" style="color:var(--g-green)" id="pct1">65%</div>
-            <button class="run-act" onclick="window.open('orchestra-trace.html','_blank')">Open ↗</button>
-          </div>
-        </div>
-
-        <div class="run-card live">
-          <div>
-            <div class="run-title">UI Redesign Planning</div>
-            <div class="run-meta">
-              <span class="run-tag tag-live"><span class="tag-dot" style="background:var(--g-green-mid)"></span>Live</span>
-              <span class="chip">Orchestrator</span><span class="chip">Critic</span>
-              <span style="font-family:var(--font-mono);font-size:10px;color:var(--md-dim)">42m ago</span>
-            </div>
-            <div class="run-hint" id="hint2">Critic → reviewing component hierarchy…</div>
-            <div class="run-bar-bg"><div class="run-bar-fill" id="bar2" style="width:0%;background:var(--g-green-mid)"></div></div>
-          </div>
-          <div class="run-right">
-            <div class="run-pct" style="color:var(--g-green)" id="pct2">45%</div>
-            <button class="run-act" onclick="window.open('orchestra-trace.html','_blank')">Open ↗</button>
-          </div>
-        </div>
-
-        <div class="run-card paused">
-          <div>
-            <div class="run-title">Week Planning — Personal Goals</div>
-            <div class="run-meta">
-              <span class="run-tag tag-paused">⏸ Paused</span>
-              <span class="chip">Orchestrator</span><span class="chip">Scheduler</span>
-              <span style="font-family:var(--font-mono);font-size:10px;color:var(--md-dim)">Paused 2h ago</span>
-            </div>
-            <div class="run-hint" style="color:var(--g-amber)">⚠ Awaiting input on Thursday schedule</div>
-            <div class="run-bar-bg"><div class="run-bar-fill" style="width:30%;background:#f29900"></div></div>
-          </div>
-          <div class="run-right">
-            <div class="run-pct" style="color:var(--g-amber)">30%</div>
-            <button class="run-act" style="color:var(--g-amber);border-color:rgba(176,96,0,0.3)">Review</button>
-          </div>
-        </div>
 
         <!-- Smart Activity Feed -->
         <div class="feed-card">
