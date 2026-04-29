@@ -12,6 +12,7 @@ import logging
 from datetime import datetime
 from backend.services.llm_utils import parse_llm_json
 from backend.agents.workflow_schema import WorkflowPlan, WorkflowStep
+from backend.api.routers.trace import emit_trace
 
 logger = logging.getLogger(__name__)
 
@@ -69,6 +70,11 @@ class OrchestratorAgent:
                 "message": message, "type": thought_type, 
                 "context_id": context_id, "risk_level": risk_level
             })
+
+        try:
+            await emit_trace(agent, "thinking", message, {"context_id": context_id})
+        except Exception as e:
+            logger.error(f"Failed to emit live trace: {e}")
 
     def register_sub_agent(self, agent_type: str, agent_instance):
         """Register a sub-agent to be coordinated"""

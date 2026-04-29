@@ -13,6 +13,7 @@ import logging
 from enum import Enum
 from backend.services.llm_utils import parse_llm_json
 from backend.agents.workflow_schema import WorkflowPlan
+from backend.api.routers.trace import emit_trace
 
 logger = logging.getLogger(__name__)
 
@@ -121,13 +122,11 @@ class CriticAgent:
     async def _audit_workflow(self, workflow_id: str) -> List[WorkflowIssue]:
         """
         Comprehensive audit of workflow health.
-        Checks 5 dimensions:
-        1. Deadlock Detection - Are dependencies circular?
-        2. Bottleneck Detection - Are there resource constraints?
-        3. Goal Drift - Is workflow still aligned with original goal?
-        4. Efficiency - Are there faster alternatives?
-        5. Dependency Analysis - Are prerequisites met?
         """
+        try:
+            await emit_trace("critic", "thinking", f"Auditing workflow {workflow_id} for inefficiencies...")
+        except Exception:
+            pass
         workflow = self.current_workflows[workflow_id]
         issues = []
         
@@ -343,6 +342,10 @@ class CriticAgent:
     async def _attempt_replan(self, workflow_id: str, issue: WorkflowIssue):
         """Attempt an autonomous replan in response to a detected issue."""
         logger.info(f"🧠 Critic Agent attempting autonomous replan for {workflow_id}")
+        try:
+            await emit_trace("critic", "thinking", f"Generating autonomous replan for issue: {issue.description}")
+        except Exception:
+            pass
 
         workflow      = self.current_workflows[workflow_id]
         original_plan = workflow["plan"]

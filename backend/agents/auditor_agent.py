@@ -14,6 +14,7 @@ This agent acts as a peer-reviewer, assessing:
 import json
 import asyncio
 from backend.services.llm_utils import parse_llm_json
+from backend.api.routers.trace import emit_trace
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, asdict
 from datetime import datetime
@@ -115,6 +116,10 @@ class AuditorAgent:
         
         action_id = action.get("id", f"action-{datetime.now().timestamp()}")
         logger.info(f"🔍 Auditor: Vibe-checking action from {executor_agent}")
+        try:
+            await emit_trace("auditor", "thinking", f"Vibe-checking proposed action from {executor_agent}")
+        except Exception:
+            pass
         
         # The 5-Point Vibe Check
         intent_alignment = await self._check_intent_alignment(
