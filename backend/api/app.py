@@ -15,7 +15,7 @@ from fastapi.staticfiles import StaticFiles
 from backend.api import state
 from backend.api.routers import (
     agents, books, debate, demo, events, guru,
-    integrations, mock_data, notes, tasks, workflows,
+    integrations, mock_data, notes, tasks, workflows, trace,
 )
 from backend.auth.router import router as auth_router
 from backend.config import get_config
@@ -191,6 +191,7 @@ def create_app() -> FastAPI:
         demo.router,
         mock_data.router,
         integrations.router,
+        trace.router,
     ]:
         app.include_router(router)
 

@@ -2119,87 +2119,98 @@ function runDemo(type){
 }
 
 // Live Reasoning Trace
-const traceData={
-  orchestrator:[
-    {agent:'Orchestrator',msg:'initiating proactive scan across all data sources…',delay:300},
-    {agent:'Orchestrator',msg:'querying task list — <span class="trace-hl-blue">6 items</span> found',delay:800},
-    {agent:'Orchestrator',msg:'checking calendar — <span class="trace-hl-blue">4 events today</span>',delay:1300},
-    {agent:'Orchestrator',msg:'dispatching Critic → GitHub PR review',delay:1800},
-    {agent:'Orchestrator',msg:'dispatching Auditor → Slack + Email scan',delay:2200},
-    {agent:'Orchestrator',msg:'<span class="trace-hl-amber">3 bottlenecks</span> surfaced — escalating',delay:3800},
-    {agent:'Orchestrator',msg:'scan complete → <span class="trace-hl-green">done ✓</span>',delay:4400,cursor:true},
-  ],
-  critic:[
-    {agent:'Critic',msg:'scanning GitHub PRs…',delay:400},
-    {agent:'Critic',msg:'PR #42 found — <span class="trace-hl-red">2 failing checks</span>',delay:1000},
-    {agent:'Critic',msg:'unit-tests: <span class="trace-hl-red">FAIL</span> · lint: <span class="trace-hl-red">FAIL</span>',delay:1500},
-    {agent:'Critic',msg:'blocking merge — <span class="trace-hl-amber">flagging to user</span>',delay:2100},
-    {agent:'Critic',msg:'<span class="trace-hl-green">GitHub scan complete ✓</span>',delay:3100,cursor:true},
-  ],
-  auditor:[
-    {agent:'Auditor',msg:'scanning Slack unread mentions…',delay:300},
-    {agent:'Auditor',msg:'@you mentioned in <span class="trace-hl-amber">#backend</span> 3h ago',delay:900},
-    {agent:'Auditor',msg:'context: deploy pipeline blocked',delay:1400},
-    {agent:'Auditor',msg:'scanning email inbox…',delay:1900},
-    {agent:'Auditor',msg:'"Product launch sign-off" — <span class="trace-hl-red">2 days overdue</span>',delay:2600},
-    {agent:'Auditor',msg:'PII check: <span class="trace-hl-green">clean ✓</span>',delay:3200},
-    {agent:'Auditor',msg:'<span class="trace-hl-green">comms scan complete ✓</span>',delay:3700,cursor:true},
-  ],
-  researcher:[
-    {agent:'Researcher',msg:'cross-referencing task dependencies…',delay:400},
-    {agent:'Researcher',msg:'task "API Documentation" — <span class="trace-hl-blue">65% done</span>',delay:1000},
-    {agent:'Researcher',msg:'task "Q2 board review" — <span class="trace-hl-red">overdue</span>',delay:1600},
-    {agent:'Researcher',msg:'calendar conflict: 15:30 overlaps deploy window',delay:2200},
-    {agent:'Researcher',msg:'<span class="trace-hl-green">context map complete ✓</span>',delay:2900,cursor:true},
-  ],
-};
-let scanRunning=false,scanTimers=[],activeTraceAgent='orchestrator';
+const traceData={ orchestrator:[], critic:[], auditor:[], researcher:[] };
+let scanRunning=false, activeTraceAgent='orchestrator';
+let liveTraceSocket = null;
+
+function connectLiveTrace() {
+  if (liveTraceSocket) return;
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsUrl = `${protocol}//${window.location.host}/ws/trace`;
+  liveTraceSocket = new WebSocket(wsUrl);
+
+  liveTraceSocket.onopen = () => {
+    console.log("WebSocket Trace Connected");
+    scanRunning = true;
+    document.getElementById('scanDot').className='scan-dot running';
+    document.getElementById('scanLabel').textContent='Live Stream Connected';
+    document.getElementById('runScanBtn').disabled=true;
+    document.getElementById('traceIdle').style.display='none';
+    document.getElementById('trace').style.display='block';
+    document.getElementById('bottlenecks').style.opacity='0.3';
+    
+    // Add connection line
+    appendTraceLine(activeTraceAgent, '<span style="color:var(--g-green)">Connected to live event stream...</span>', false);
+  };
+
+  liveTraceSocket.onmessage = (e) => {
+    try {
+      const data = JSON.parse(e.data);
+      const ag = (data.agent || 'orchestrator').toLowerCase();
+      if (!traceData[ag]) traceData[ag] = [];
+      const msg = data.message || data.status;
+      const formattedAgent = ag.charAt(0).toUpperCase() + ag.slice(1);
+      
+      traceData[ag].push({ agent: formattedAgent, msg: msg });
+      
+      if (activeTraceAgent === ag) {
+        appendTraceLine(formattedAgent, msg, false);
+      }
+    } catch(err) { console.error("Error parsing trace event", err); }
+  };
+
+  liveTraceSocket.onclose = () => {
+    console.log("WebSocket Trace Disconnected");
+    liveTraceSocket = null;
+    scanRunning = false;
+    document.getElementById('scanLabel').textContent='Disconnected';
+    document.getElementById('scanDot').className='scan-dot idle';
+    document.getElementById('runScanBtn').disabled=false;
+    // Auto reconnect
+    setTimeout(connectLiveTrace, 5000);
+  };
+}
+
+function appendTraceLine(agentName, msg, cursor) {
+  const traceEl = document.getElementById('trace');
+  const div = document.createElement('div');
+  div.className = 'trace-line';
+  div.style.opacity = '1';
+  div.innerHTML = `<span class="trace-agent">${agentName}</span><span> → ${msg}${cursor?' <span class="trace-cursor"></span>':''}</span>`;
+  traceEl.appendChild(div);
+  traceEl.scrollTop = traceEl.scrollHeight;
+}
 
 function runScan(){
-  if(scanRunning)return; scanRunning=true;
-  document.getElementById('scanDot').className='scan-dot running';
-  document.getElementById('scanLabel').textContent='Running…';
-  document.getElementById('runScanBtn').disabled=true;
-  document.getElementById('traceIdle').style.display='none';
-  const traceEl=document.getElementById('trace'); traceEl.style.display='block'; traceEl.innerHTML='';
-  document.getElementById('bottlenecks').style.opacity='0.3';
-  renderTraceLines(activeTraceAgent,()=>{
-    document.getElementById('scanDot').className='scan-dot done';
-    document.getElementById('scanLabel').textContent='Done';
-    document.getElementById('runScanBtn').disabled=false;
-    document.getElementById('bottlenecks').style.opacity='1';
-    document.getElementById('bottlenecks').style.transition='opacity 0.5s';
-    scanRunning=false;
-  });
+  connectLiveTrace();
 }
-function renderTraceLines(agent,onDone){
-  const traceEl=document.getElementById('trace'); traceEl.innerHTML='';
-  const lines=traceData[agent]||[];
-  const maxDelay=lines.length?lines[lines.length-1].delay:0;
-  lines.forEach(line=>{
-    const t=setTimeout(()=>{
-      const div=document.createElement('div'); div.className='trace-line'; div.style.animationDelay='0s';
-      div.innerHTML=`<span class="trace-agent">${line.agent}</span><span> → ${line.msg}${line.cursor?' <span class="trace-cursor"></span>':''}</span>`;
-      traceEl.appendChild(div); traceEl.scrollTop=traceEl.scrollHeight;
-    },line.delay);
-    scanTimers.push(t);
-  });
-  if(onDone){const t=setTimeout(onDone,maxDelay+400);scanTimers.push(t);}
+
+function switchTraceAgent(agent, btn){
+  activeTraceAgent = agent;
+  document.querySelectorAll('.trace-agent-tabs .trace-tab').forEach(t=>t.classList.remove('active')); 
+  btn.classList.add('active');
+  const traceEl = document.getElementById('trace');
+  if(traceEl.style.display !== 'none'){
+    traceEl.innerHTML = '';
+    (traceData[agent]||[]).forEach(line => {
+      appendTraceLine(line.agent, line.msg, line.cursor);
+    });
+  }
 }
-function switchTraceAgent(agent,btn){
-  activeTraceAgent=agent;
-  document.querySelectorAll('.trace-agent-tabs .trace-tab').forEach(t=>t.classList.remove('active')); btn.classList.add('active');
-  const traceEl=document.getElementById('trace');
-  if(traceEl.style.display!=='none'){traceEl.innerHTML='';(traceData[agent]||[]).forEach(line=>{const div=document.createElement('div');div.className='trace-line';div.style.opacity='1';div.innerHTML=`<span class="trace-agent">${line.agent}</span><span> → ${line.msg}${line.cursor?' <span class="trace-cursor"></span>':''}</span>`;traceEl.appendChild(div);});}
-}
+
 function clearScan(){
-  scanTimers.forEach(t=>clearTimeout(t));scanTimers=[];scanRunning=false;
+  if(liveTraceSocket) { liveTraceSocket.close(); liveTraceSocket = null; }
+  scanRunning = false;
   document.getElementById('scanDot').className='scan-dot idle';
   document.getElementById('scanLabel').textContent='Idle';
   document.getElementById('runScanBtn').disabled=false;
   document.getElementById('traceIdle').style.display='flex';
-  const t=document.getElementById('trace');t.style.display='none';t.innerHTML='';
+  const t = document.getElementById('trace');
+  t.style.display='none'; t.innerHTML='';
   document.getElementById('bottlenecks').style.opacity='1';
+  
+  // Clear stored data
+  Object.keys(traceData).forEach(k => traceData[k] = []);
 }
 function dismissBn(id){const el=document.getElementById(id);if(!el)return;el.style.transition='all 0.25s';el.style.opacity='0';el.style.maxHeight=el.offsetHeight+'px';setTimeout(()=>{el.style.maxHeight='0';el.style.padding='0';},50);setTimeout(()=>el.remove(),320);}
 function reviewBn(btn,source){btn.textContent='✓ Reviewing…';btn.style.background='var(--g-green-light)';btn.style.color='var(--g-green)';btn.style.borderColor='rgba(30,142,62,0.2)';btn.disabled=true;const n=new Date(),t=`${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}`;const lbls={github:'PR #42 review',slack:'#backend reply',email:'launch sign-off reply'};feedData.unshift({time:t,agent:'ORCHESTRATOR',color:'var(--g-green)',cbg:'var(--g-green-light)',text:`Acting on bottleneck: <span class="f-hl" style="color:var(--g-green)">${lbls[source]}</span> — drafting response…`,tag:'tasks'});renderFeed();}
