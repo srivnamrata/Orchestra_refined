@@ -1510,7 +1510,7 @@ html.dark .completion-toast { box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1p
     <div class="nav-item"><span class="ms">task_alt</span> All Tasks <span class="nav-badge nb-gray">24</span></div>
     <div class="nav-item"><span class="ms">folder_open</span> Outputs</div>
     <div class="nav-label">Intelligence</div>
-    <div class="nav-item" onclick="window.open('orchestra-trace.html','_blank')" style="cursor:pointer"><span class="ms">psychology</span> Agent Reasoning</div>
+    <div class="nav-item" onclick="window.open('/trace','_blank')" style="cursor:pointer"><span class="ms">psychology</span> Agent Reasoning</div>
     <div class="nav-item"><span class="ms">verified</span> Vibe Checks <span class="nav-badge nb-blue">new</span></div>
     <div class="nav-item"><span class="ms">swords</span> Debates</div>
     <div class="nav-item"><span class="ms">shield</span> Safety Audit</div>
@@ -1625,7 +1625,7 @@ html.dark .completion-toast { box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1p
         <div class="sc-num" style="color:var(--g-violet)">83h</div>
         <div class="sc-lbl">Time Saved</div>
       </div>
-      <div class="stat-card" style="cursor:pointer" onclick="window.open('trace.html','_blank')">
+      <div class="stat-card" style="cursor:pointer" onclick="window.open('/trace','_blank')">
         <div class="sc-icon-row">
           <div class="sc-icon" style="background:var(--g-amber-light)"><span class="ms" style="color:var(--g-amber)">account_tree</span></div>
           <span class="sc-trend trend-nt">+2 this week</span>
@@ -2218,8 +2218,8 @@ document.querySelectorAll('.nav-item').forEach(item=>{item.addEventListener('cli
 // ══ COMMAND PALETTE ══════════════════════════════════════════════
 const PALETTE_ITEMS=[
   {section:'Navigate',icon:'home',label:'Go to Dashboard',sub:'',action:()=>{}},
-  {section:'Navigate',icon:'bolt',label:'View Active Workflows',sub:'3 running',action:()=>window.open('orchestra-trace.html','_blank')},
-  {section:'Navigate',icon:'psychology',label:'Open Agent Trace',sub:'Full timeline view',action:()=>window.open('orchestra-trace.html','_blank')},
+  {section:'Navigate',icon:'bolt',label:'View Active Workflows',sub:'3 running',action:()=>window.open('/trace','_blank')},
+  {section:'Navigate',icon:'psychology',label:'Open Agent Trace',sub:'Full timeline view',action:()=>window.open('/trace','_blank')},
   {section:'Navigate',icon:'folder_open',label:'View Outputs',sub:'',action:()=>{}},
   {section:'Actions',icon:'send',label:'Submit New Goal',sub:'⌘ Enter',action:()=>{closePalette();document.getElementById('goalInput').focus();}},
   {section:'Actions',icon:'radar',label:'Run Agent Scan',sub:'Proactive scan',action:()=>{closePalette();runScan();}},
@@ -2493,7 +2493,7 @@ const PALETTE_COMMANDS = [
   { id:'agent-debate', group:'Agents',     icon:'gavel',        iconBg:'var(--g-red-light)',     iconColor:'var(--g-red)',    title:'Agent Debate',                sub:'Orchestrator vs Critic argue best strategy',           kbd:'',       action:()=>{ closePalette(); setTimeout(()=>runDemo('debate'), 200); } },
 
   // Navigate
-  { id:'nav-trace',    group:'Navigate',   icon:'account_tree', iconBg:'var(--g-blue-light)',   iconColor:'var(--g-blue)',   title:'Open Agent Trace',            sub:'Full timeline — who did what and when',                kbd:'',       action:()=>{ closePalette(); window.open('orchestra-trace.html','_blank'); } },
+  { id:'nav-trace',    group:'Navigate',   icon:'account_tree', iconBg:'var(--g-blue-light)',   iconColor:'var(--g-blue)',   title:'Open Agent Trace',            sub:'Full timeline — who did what and when',                kbd:'',       action:()=>{ closePalette(); window.open('/trace','_blank'); } },
   { id:'nav-workflows',group:'Navigate',   icon:'bolt',         iconBg:'var(--g-amber-light)',  iconColor:'var(--g-amber)',  title:'View All Workflows',          sub:'3 active · 24 total',                                  kbd:'',       action:()=>{ closePalette(); } },
   { id:'nav-outputs',  group:'Navigate',   icon:'folder_open',  iconBg:'var(--g-green-light)',  iconColor:'var(--g-green)',  title:'Outputs',                     sub:'Browse agent-generated files and reports',             kbd:'',       action:()=>{ closePalette(); } },
   { id:'nav-safety',   group:'Navigate',   icon:'shield',       iconBg:'var(--g-teal-light)',   iconColor:'var(--g-teal)',   title:'Safety Audit',                sub:'PII, goal alignment, task ethics breakdown',           kbd:'',       action:()=>{ closePalette(); } },
@@ -2654,7 +2654,7 @@ function paletteKeydown(e) {
     <div class="ct-sub" id="ctSub">3 files ready · 38 min</div>
   </div>
   <div class="ct-files" id="ctFiles"></div>
-  <button class="ct-view" onclick="window.open('orchestra-trace.html','_blank');hideToast()">
+  <button class="ct-view" onclick="window.open('/trace','_blank');hideToast()">
     <span class="ms sm">open_in_new</span> View trace
   </button>
   <button class="ct-close" onclick="hideToast()"><span class="ms sm">close</span></button>
@@ -2675,7 +2675,7 @@ const NOTIF_DATA = [
     title:'API Documentation Workflow complete',
     desc:'Orchestrator delivered 3 files — api-docs-v1.0.pdf, schemas.json, api-docs-v1.0.md',
     time:'2 min ago',
-    action:'View trace', actionFn:()=>window.open('orchestra-trace.html','_blank')
+    action:'View trace', actionFn:()=>window.open('/trace','_blank')
   },
   {
     id:'n2', type:'review', unread:true,
@@ -2828,7 +2828,7 @@ function showCompletionToast(title, sub, files) {
     icon:'🎉', iconBg:'var(--g-green-light)',
     title, desc: sub + ' · ' + files.join(', '),
     time:'Just now', action:'View trace',
-    actionFn: ()=>window.open('orchestra-trace.html','_blank')
+    actionFn: ()=>window.open('/trace','_blank')
   });
   updateNotifDot();
   if(notifOpen) renderNotifs();
@@ -3694,7 +3694,7 @@ const AGENT_DATA = {
     ],
     tasks:['Decompose goal into subtasks','Assign Researcher → API schemas','Accept Critic replan','Assign Writer to draft'],
     log:['09:41 → Task received: API Documentation','09:41 → Decomposed into 4 subtasks','09:42 → Assigned Researcher','09:43 → Accepted Critic replan'],
-    actions:[{label:'Pause all workflows',cls:'pause',icon:'pause'},{label:'Reprioritise',cls:'',icon:'low_priority'},{label:'View trace',cls:'',icon:'account_tree',fn:()=>window.open('orchestra-trace.html','_blank')}]
+    actions:[{label:'Pause all workflows',cls:'pause',icon:'pause'},{label:'Reprioritise',cls:'',icon:'low_priority'},{label:'View trace',cls:'',icon:'account_tree',fn:()=>window.open('/trace','_blank')}]
   },
   researcher: {
     name:'Researcher', role:'Web & Doc Search', icon:'🔍',
