@@ -773,7 +773,7 @@ html.dark .qchip {
   font-size: 12px; font-weight: 700;
   border: 1px solid rgba(19,115,51,0.2);
 }
-.safety-bars { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
+.safety-bars { display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 4px; }
 .sb-name { font-size: 12px; font-weight: 500; margin-bottom: 5px; }
 .sb-bar-row { display: flex; align-items: center; gap: 8px; }
 .sb-bar-bg { flex: 1; height: 6px; background: var(--md-surface-2); border-radius: var(--radius-full); overflow: hidden; }
@@ -1635,39 +1635,8 @@ html.dark .completion-toast { box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1p
       </div>
     </div>
 
-    <!-- Safety breakdown -->
-    <div class="safety-card anim a3">
-      <div class="safety-head">
-        <div class="sec-title">🛡️ Safety Score Breakdown</div>
-        <div class="safety-pill"><span class="ms sm" style="color:var(--g-green)">check_circle</span> Overall 98%</div>
-      </div>
-      <div class="safety-bars">
-        <div>
-          <div class="sb-name">PII Safety</div>
-          <div class="sb-bar-row">
-            <div class="sb-bar-bg"><div class="sb-bar-fill" id="pii-bar" style="width:0%;background:var(--g-green-mid)"></div></div>
-            <div class="sb-pct" style="color:var(--g-green)">100%</div>
-          </div>
-        </div>
-        <div>
-          <div class="sb-name">Goal Alignment</div>
-          <div class="sb-bar-row">
-            <div class="sb-bar-bg"><div class="sb-bar-fill" id="goal-bar" style="width:0%;background:var(--g-blue)"></div></div>
-            <div class="sb-pct" style="color:var(--g-blue)">96%</div>
-          </div>
-        </div>
-        <div>
-          <div class="sb-name">Task Ethics</div>
-          <div class="sb-bar-row">
-            <div class="sb-bar-bg"><div class="sb-bar-fill" id="ethics-bar" style="width:0%;background:var(--g-teal)"></div></div>
-            <div class="sb-pct" style="color:var(--g-teal)">94%</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- Main grid -->
-    <div class="main-grid anim a4">
+    <div class="main-grid anim a3">
 
       <!-- Left col -->
       <div class="runs-col">
@@ -1705,6 +1674,37 @@ html.dark .completion-toast { box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1p
 
       <!-- Right col -->
       <div class="right-col">
+
+        <!-- Safety breakdown -->
+        <div class="safety-card" style="margin-bottom:16px;">
+          <div class="safety-head">
+            <div class="sec-title">🛡️ Safety Score</div>
+            <div class="safety-pill"><span class="ms sm" style="color:var(--g-green)">check_circle</span> 98%</div>
+          </div>
+          <div class="safety-bars">
+            <div>
+              <div class="sb-name">PII Safety</div>
+              <div class="sb-bar-row">
+                <div class="sb-bar-bg"><div class="sb-bar-fill" id="pii-bar" style="width:0%;background:var(--g-green-mid)"></div></div>
+                <div class="sb-pct" style="color:var(--g-green)">100%</div>
+              </div>
+            </div>
+            <div>
+              <div class="sb-name">Goal Alignment</div>
+              <div class="sb-bar-row">
+                <div class="sb-bar-bg"><div class="sb-bar-fill" id="goal-bar" style="width:0%;background:var(--g-blue)"></div></div>
+                <div class="sb-pct" style="color:var(--g-blue)">96%</div>
+              </div>
+            </div>
+            <div>
+              <div class="sb-name">Task Ethics</div>
+              <div class="sb-bar-row">
+                <div class="sb-bar-bg"><div class="sb-bar-fill" id="ethics-bar" style="width:0%;background:var(--g-teal)"></div></div>
+                <div class="sb-pct" style="color:var(--g-teal)">94%</div>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <!-- Agent Health -->
         <div class="agent-health-card">
