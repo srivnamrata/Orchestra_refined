@@ -39,13 +39,15 @@ class SchedulerAgent:
         elif step_type == "create_meeting":
             return await self._create_meeting(step, previous_results)
         else:
-            return {"status": "unsupported_step_type"}
+            raise ValueError(f"Unsupported step type: {step_type}")
     
     async def _find_available_slot(self, step: Dict) -> Dict:
         """Find available time slot for a meeting"""
         
-        duration_minutes = step.get("inputs", {}).get("duration", 60)
+        duration_minutes = int(step.get("inputs", {}).get("duration", 60))
         participants = step.get("inputs", {}).get("participants", [])
+        if not isinstance(participants, list):
+            participants = [participants] if participants else []
         start_date = step.get("inputs", {}).get("start_date")
         
         logger.info(f"Finding available slot for {len(participants)} participants")
@@ -90,7 +92,7 @@ class SchedulerAgent:
         
         participant = step.get("inputs", {}).get("participant")
         time_slot = step.get("inputs", {}).get("time_slot")
-        duration = step.get("inputs", {}).get("duration", 60)
+        duration = int(step.get("inputs", {}).get("duration", 60))
         
         logger.info(f"Checking availability for {participant} at {time_slot}")
         
@@ -112,7 +114,14 @@ class SchedulerAgent:
         title = step.get("inputs", {}).get("title")
         time_slot = step.get("inputs", {}).get("time_slot")
         participants = step.get("inputs", {}).get("participants", [])
-        duration = step.get("inputs", {}).get("duration", 60)
+        duration = int(step.get("inputs", {}).get("duration", 60))
+        
+        if not title:
+            raise ValueError("Meeting 'title' is required")
+        if not time_slot:
+            raise ValueError("Meeting 'time_slot' is required")
+        if not isinstance(participants, list):
+            participants = [participants] if participants else []
         description = step.get("inputs", {}).get("description", "")
         
         logger.info(f"Creating meeting: {title} at {time_slot}")

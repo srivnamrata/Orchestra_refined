@@ -1,4 +1,5 @@
 import { activityFeed } from './feed.js';
+import { apiFetch, apiUrl } from './api.js';
 
 let _scanRunning = false;
 
@@ -25,20 +26,42 @@ export async function runScan(btn) {
     };
 
     activityFeed.log('📡 Intelligence Scan initiated…', 'status', 'SYSTEM');
-    [
-        { delay: 300,  agent: 'ORCHESTRATOR', msg: 'Starting cross-agent environment scan…',              color: '#1a73e8' },
-        { delay: 900,  agent: 'CRITIC',        msg: 'Analysing task backlog for planning risks…',          color: '#e37400' },
-        { delay: 1500, agent: 'RESEARCHER',    msg: 'Checking external signals (GitHub, Slack, Email)…',  color: '#1e8e3e' },
-        { delay: 2100, agent: 'AUDITOR',       msg: 'Auditing cross-agent intent alignment…',             color: '#007b83' },
-        { delay: 2800, agent: 'ORCHESTRATOR',  msg: '✅ Scan complete — bottlenecks surfaced in Intelligence Panel.', color: '#1a73e8' },
-    ].forEach(s => setTimeout(() => { append(s.agent, s.msg, s.color); activityFeed.log(s.msg, 'info', s.agent); }, s.delay));
 
-    setTimeout(() => {
+    try {
+        await apiFetch('/agent/monitor/scan', { method: 'POST' });
+        
+        const es = new EventSource(apiUrl('/agent/reasoning/stream'));
+        
+        es.addEventListener('reasoning', (e) => {
+            try {
+                const data = JSON.parse(e.data);
+                const colorMap = { 'orchestrator': '#1a73e8', 'critic': '#e37400', 'auditor': '#007b83', 'guru': '#b06000' };
+                append((data.agent || 'SYSTEM').toUpperCase(), data.message, colorMap[data.agent] || '#1a73e8');
+                activityFeed.log(data.message, 'info', (data.agent || 'SYSTEM').toUpperCase());
+            } catch (err) {}
+        });
+        
+        es.addEventListener('done', (e) => {
+            es.close();
+            if (scanDot)   scanDot.className = 'scan-dot idle';
+            if (scanLabel) scanLabel.textContent = 'Idle';
+            if (scanBtn)   { scanBtn.disabled = false; scanBtn.innerHTML = '<span class="ms sm">radar</span> Run Scan'; }
+            _scanRunning = false;
+        });
+        
+        es.addEventListener('error', (e) => {
+            es.close();
+            if (scanDot)   scanDot.className = 'scan-dot idle';
+            if (scanLabel) scanLabel.textContent = 'Idle';
+            if (scanBtn)   { scanBtn.disabled = false; scanBtn.innerHTML = '<span class="ms sm">radar</span> Run Scan'; }
+            _scanRunning = false;
+        });
+    } catch (e) {
         if (scanDot)   scanDot.className = 'scan-dot idle';
         if (scanLabel) scanLabel.textContent = 'Idle';
         if (scanBtn)   { scanBtn.disabled = false; scanBtn.innerHTML = '<span class="ms sm">radar</span> Run Scan'; }
         _scanRunning = false;
-    }, 3200);
+    }
 }
 
 export function clearScan() {

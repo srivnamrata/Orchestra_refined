@@ -25,6 +25,7 @@ export async function runGuruAudit() {
         const card = (ico, icoColor, label, section) => {
             const s = section || {};
             const hasTrain = s.training && typeof s.training === 'object';
+            const hasHabit = s.micro_habit && typeof s.micro_habit === 'string';
             return `
             <div class="run-card" style="border-top:3px solid ${color(s.assessment)}">
               <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
@@ -32,6 +33,10 @@ export async function runGuruAudit() {
                 <div style="flex:1"><div style="font-weight:700;font-size:13px">${label}</div><div style="font-size:11px;color:var(--md-dim)">${icon(s.assessment)} ${(s.assessment||'reviewing').replace('_',' ')}</div></div>
               </div>
               <p style="font-size:12px;color:var(--md-on-surface);line-height:1.6;margin:0 0 10px">${s.insight||'Analysing…'}</p>
+              ${hasHabit?`<div style="background:var(--g-green-light);border:1px solid rgba(30,142,62,0.2);border-radius:10px;padding:10px 12px;font-size:11px;margin-bottom:8px">
+                <div style="font-weight:700;color:var(--g-green);margin-bottom:3px">🌱 Micro-Habit</div>
+                <div style="color:var(--md-on-surface)">${s.micro_habit}</div>
+              </div>`:''}
               ${hasTrain?`<div style="background:var(--g-amber-light);border:1px solid rgba(176,96,0,0.2);border-radius:10px;padding:10px 12px;font-size:11px">
                 <div style="font-weight:700;color:var(--g-amber);margin-bottom:3px">📚 Suggested: ${s.training.topic}</div>
                 <div style="color:var(--md-dim)">${s.training.why||''}</div>
@@ -55,10 +60,11 @@ export async function runGuruAudit() {
             <div style="font-size:11px; color:var(--g-violet); font-weight:600; margin-top:6px">💡 ${a.strategic_alignment.suggestion}</div>
           </div>
           ` : ''}
-          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;margin-bottom:16px">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin-bottom:16px">
             ${card('code','var(--g-blue)','Code Quality',a.code)}
             ${card('mail','#7c3aed','Communication',a.communication)}
             ${card('task_alt','var(--g-green)','Efficiency',a.efficiency)}
+            ${a.wellness ? card('self_improvement','var(--g-teal)','Wellness', {assessment: (a.wellness.burnout_risk === 'high' ? 'needs_improvement' : 'good'), ...a.wellness}) : ''}
           </div>
           ${a.cheer?`<div style="text-align:center;padding:16px;font-size:14px;font-weight:600;color:var(--g-amber)">🙏 ${a.cheer}</div>`:''}`;
 

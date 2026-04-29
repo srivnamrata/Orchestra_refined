@@ -66,7 +66,7 @@ echo -e "\033[0;37mPress Ctrl+C to stop everything.\033[0m"
 echo -e "\033[0;36m==========================================================================\033[0m"
 
 # Start the main Orchestrator App in foreground
-python -m uvicorn backend.api.main:app --host 0.0.0.0 --port 8000 --reload
+python3 -m uvicorn backend.api.main:app --host 0.0.0.0 --port 8000 --reload
 
 # If uvicorn crashes or is manually stopped, trigger cleanup
 cleanup

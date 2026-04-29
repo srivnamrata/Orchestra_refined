@@ -93,6 +93,20 @@ async def get_debate_details(debate_id: str):
         raise HTTPException(status_code=404, detail="Debate not found")
     return debate_summary
 
+@router.get("/debate-history", tags=["Multi-Agent Debate"])
+async def get_debate_history(limit: int = 10):
+    debates = []
+    for d_id, debate in reversed(list(state.debate_engine.debates.items())):
+        summary = state.debate_engine.get_debate_summary(d_id)
+        if summary:
+            debates.append(summary)
+        if len(debates) >= limit:
+            break
+    return {
+        "recent_debates": debates,
+        "total_debates_conducted": len(state.debate_engine.debates),
+    }
+
 
 @router.get("/vibe-check/{check_id}", tags=["Vibe-Checking"])
 async def get_vibe_check_report(check_id: str):

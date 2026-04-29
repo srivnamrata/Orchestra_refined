@@ -80,12 +80,13 @@ class ProactiveMonitorAgent:
     DEADLINE_WARN_HOURS   = 48    # warn if an event is within 48h
 
     def __init__(self, llm_service, critic_agent, auditor_agent,
-                 knowledge_graph, pubsub_service):
+                 knowledge_graph, pubsub_service, param_mitra_agent=None):
         self.llm            = llm_service
         self.critic         = critic_agent
         self.auditor        = auditor_agent
         self.kg             = knowledge_graph
         self.pubsub         = pubsub_service
+        self.param_mitra    = param_mitra_agent
 
         self._running       = False
         self._task: Optional[asyncio.Task] = None
@@ -247,6 +248,24 @@ class ProactiveMonitorAgent:
             await self._think("critic",
                 f"🚨 {len(overdue)} overdue task(s): "
                 + ", ".join(f'"{t["title"]}"' for t in overdue[:3]))
+            
+            # Param Mitra Accountability Intervention
+            if self.param_mitra:
+                worst_task = overdue[0]
+                await self._think("orchestrator", f"Calling Param Mitra for accountability on '{worst_task['title']}'...")
+                msg = await self.param_mitra.check_accountability(worst_task['title'], 3, {"task_status": worst_task.get("status", "delayed")})
+                notif = {
+                    "id":       f"notif-{scan_id}-accountability",
+                    "type":     "accountability_intervention",
+                    "severity": "high",
+                    "title":    f"Param Mitra Intervention: {worst_task['title']}",
+                    "message":  msg,
+                    "actions":  ["Break task into 15m chunks", "Ask Param Mitra for help"],
+                    "created_at": datetime.now().isoformat(),
+                }
+                new_notifications.append(notif)
+                await self._alert("guru", msg)
+
             notif = {
                 "id":       f"notif-{scan_id}-overdue",
                 "type":     "overdue_tasks",

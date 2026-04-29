@@ -24,12 +24,28 @@ class MockLLMService(LLMService):
     """Returns stub JSON — only used in local dev (USE_MOCK_LLM=true)."""
     async def call(self, prompt: str, **kwargs) -> str:
         if "execution plan" in prompt.lower() or "concrete execution plan" in prompt.lower():
-            # Return a structured workflow plan so the orchestrator can validate
-            # and execute by explicit step_id rather than list position.
             goal_line = next((l for l in prompt.split("\n") if l.startswith("Goal:")), "Goal: task")
             goal_text = goal_line.replace("Goal:", "").strip()[:60]
             from datetime import datetime, timedelta
             due = (datetime.now() + timedelta(days=7)).strftime("%Y-%m-%d")
+            
+            if "analytic" in prompt.lower() or "report" in prompt.lower() or "chart" in prompt.lower():
+                return json.dumps({
+                    "goal": goal_text,
+                    "schema_version": "workflow-plan/v1",
+                    "total_steps": 1,
+                    "steps": [
+                        {"step_id": 0, "name": f"Analytics: {goal_text}", "type": "analytics",
+                         "agent": "analytics", "depends_on": [], "inputs": {
+                             "title": goal_text,
+                             "data_source": "mock_data",
+                             "metrics": ["completion_rate", "velocity"]
+                         }, "expected_outputs": ["report_id"], "error_handling": "retry", "timeout_seconds": 30}
+                    ],
+                    "parallel_groups": [],
+                    "estimated_duration_seconds": 30,
+                })
+                
             return json.dumps({
                 "goal": goal_text,
                 "schema_version": "workflow-plan/v1",
@@ -77,11 +93,13 @@ class MockLLMService(LLMService):
                 "code": {
                     "assessment": "good",
                     "insight": "Code activity looks healthy and consistent, with enough momentum to keep shipping.",
+                    "micro_habit": "Review your own PR for 2 minutes before requesting a review.",
                     "training": None,
                 },
                 "communication": {
                     "assessment": "needs_improvement",
                     "insight": "Your communication would benefit from a little more context and warmth in a few places.",
+                    "micro_habit": "Add one sentence of positive context before giving negative feedback.",
                     "training": {
                         "topic": "Clearer written communication",
                         "why": "A more explicit tone can cut down on follow-up questions and friction.",
@@ -96,10 +114,19 @@ class MockLLMService(LLMService):
                 "efficiency": {
                     "assessment": "good",
                     "insight": "Task flow is reasonably balanced, and you are finishing more than you are starting.",
+                    "micro_habit": "Write down tomorrow's top priority before you close your laptop today.",
                     "training": None,
+                },
+                "wellness": {
+                    "burnout_risk": "low",
+                    "insight": "Your pacing looks sustainable. You haven't had late-night commits.",
+                    "micro_habit": "Take a 5-minute stretch break every 90 minutes."
                 },
                 "cheer": "Keep going. Small wins are stacking up.",
             })
+            
+        if "life coach. the user has delayed" in prompt.lower():
+            return "I see you've delayed this high-priority task again. Is it feeling too overwhelming right now? Let's break it down into a 15-minute chunk and just start."
         if "revised plan" in prompt.lower():
             return json.dumps({"revised_plan": [], "explanation": "Optimized", "efficiency_gain": 0.20, "confidence": 0.80})
         if "on track" in prompt.lower():

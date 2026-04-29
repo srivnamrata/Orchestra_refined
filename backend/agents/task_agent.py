@@ -43,7 +43,7 @@ class TaskAgent:
         elif step_type == "complete_task":
             return await self._complete_task(step)
         else:
-            return {"status": "unsupported_step_type"}
+            raise ValueError(f"Unsupported step type: {step_type}")
     
     async def _create_task(self, step: Dict) -> Dict:
         """Create a new task"""
@@ -99,8 +99,8 @@ class TaskAgent:
         task_id = step.get("inputs", {}).get("task_id")
         assigned_to = step.get("inputs", {}).get("assigned_to")
         
-        if task_id not in self.tasks:
-            return {"status": "error", "message": f"Task {task_id} not found"}
+        if not task_id or task_id not in self.tasks:
+            raise ValueError(f"Task '{task_id}' not found")
         
         logger.info(f"Assigning task {task_id} to {assigned_to}")
         
@@ -119,8 +119,8 @@ class TaskAgent:
         task_id = step.get("inputs", {}).get("task_id")
         updates = step.get("inputs", {}).get("updates", {})
         
-        if task_id not in self.tasks:
-            return {"status": "error", "message": f"Task {task_id} not found"}
+        if not task_id or task_id not in self.tasks:
+            raise ValueError(f"Task '{task_id}' not found")
         
         logger.info(f"Updating task {task_id}")
         
@@ -141,8 +141,8 @@ class TaskAgent:
         
         task_id = step.get("inputs", {}).get("task_id")
         
-        if task_id not in self.tasks:
-            return {"status": "error", "message": f"Task {task_id} not found"}
+        if not task_id or task_id not in self.tasks:
+            raise ValueError(f"Task '{task_id}' not found")
         
         logger.info(f"Completing task {task_id}")
         

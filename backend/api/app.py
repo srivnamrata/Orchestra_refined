@@ -90,11 +90,12 @@ async def lifespan(app: FastAPI):
 
     state.proactive_monitor = ProactiveMonitorAgent(
         state.llm_service, state.critic_agent, state.security_auditor,
-        state.knowledge_graph, state.pubsub_service,
+        state.knowledge_graph, state.pubsub_service, param_mitra_agent=state.param_mitra
     )
 
     from backend.agents.task_agent import TaskAgent
     from backend.agents.knowledge_agent import KnowledgeAgent
+    from backend.agents.analytics_agent import AnalyticsAgent
 
     state.orchestrator.register_sub_agent("scheduler", SchedulerAgent(state.llm_service))
     state.orchestrator.register_sub_agent("librarian", state.veda_librarian)
@@ -103,6 +104,7 @@ async def lifespan(app: FastAPI):
     state.orchestrator.register_sub_agent("task",      TaskAgent(state.knowledge_graph))
     state.orchestrator.register_sub_agent("knowledge", KnowledgeAgent(state.knowledge_graph))
     state.orchestrator.register_sub_agent("news",      NewsAgent(state.knowledge_graph))
+    state.orchestrator.register_sub_agent("analytics", AnalyticsAgent(state.knowledge_graph, state.llm_service))
 
     state.debate_engine = MultiAgentDebateEngine({
         "security_auditor": state.security_auditor,

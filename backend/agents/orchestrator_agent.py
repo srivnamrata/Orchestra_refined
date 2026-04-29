@@ -170,6 +170,12 @@ class OrchestratorAgent:
         Deadline: {request.deadline}
         Context: {json.dumps(request.context)}
         
+        Available Agents and their step types:
+        - scheduler (type: calendar): For scheduling meetings and calendar events.
+        - task (type: task): For creating, managing, and assigning tasks.
+        - knowledge (type: search/note/integration): For fetching information, note taking, and integration.
+        - analytics (type: analytics): For data analysis, generating reports, metrics, and charts.
+        
         Generate a detailed execution plan in strict JSON format with the following structure:
         {{
             "goal": "...",
@@ -179,8 +185,8 @@ class OrchestratorAgent:
                 {{
                     "step_id": 0,
                     "name": "step_name",
-                    "type": "calendar|task|note|search|integration",
-                    "agent": "scheduler|task|knowledge",
+                    "type": "calendar|task|note|search|integration|analytics",
+                    "agent": "scheduler|task|knowledge|analytics",
                     "depends_on": [step_ids],
                     "inputs": {{}},
                     "expected_outputs": [],

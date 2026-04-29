@@ -37,12 +37,28 @@ export function isAuthenticated() {
 }
 
 // ── Authenticated fetch wrapper ──────────────────────────────────────────────
-export function apiFetch(path, options = {}) {
+export async function apiFetch(path, options = {}) {
     const url     = /^https?:\/\//i.test(path) ? path : apiUrl(path);
     const token   = getSessionToken();
     const headers = { ...(options.headers || {}) };
     if (token) headers['X-Session-Token'] = token;
-    return fetch(url, { ...options, headers });
+    
+    try {
+        const response = await fetch(url, { ...options, headers });
+        if (!response.ok) {
+            console.error(`[API Error] ${options.method || 'GET'} ${path} returned ${response.status}`);
+            window.dispatchEvent(new CustomEvent('orchestra_api_error', { 
+                detail: { path, status: response.status, method: options.method || 'GET' } 
+            }));
+        }
+        return response;
+    } catch (err) {
+        console.error(`[API Network Error] Failed to fetch ${path}:`, err);
+        window.dispatchEvent(new CustomEvent('orchestra_api_error', { 
+            detail: { path, status: 0, method: options.method || 'GET', error: err.message } 
+        }));
+        throw err;
+    }
 }
 
 // Expose for legacy inline scripts and console debugging

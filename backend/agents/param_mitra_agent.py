@@ -54,12 +54,14 @@ class ParamMitraAgent:
         training_topic: Optional[str] = None,
         training_why: Optional[str] = None,
         training_link_hint: Optional[str] = None,
+        default_micro_habit: Optional[str] = None,
     ) -> Dict[str, Any]:
         if not isinstance(section, dict):
             section = {}
 
         assessment = self._first_non_empty(section.get("assessment"), default=default_assessment)
         insight = self._first_non_empty(section.get("insight"), default=default_insight)
+        micro_habit = self._first_non_empty(section.get("micro_habit"), default=default_micro_habit)
         training = section.get("training")
 
         if isinstance(training, dict):
@@ -83,6 +85,7 @@ class ParamMitraAgent:
         return {
             "assessment": assessment,
             "insight": insight,
+            "micro_habit": micro_habit,
             "training": training,
         }
 
@@ -122,6 +125,7 @@ class ParamMitraAgent:
         communication_section = audit.get("communication") if isinstance(audit.get("communication"), dict) else {}
         efficiency_section = audit.get("efficiency") if isinstance(audit.get("efficiency"), dict) else {}
         strategic_alignment = audit.get("strategic_alignment") if isinstance(audit.get("strategic_alignment"), dict) else {}
+        wellness_section = audit.get("wellness") if isinstance(audit.get("wellness"), dict) else {}
 
         code_insight = self._first_non_empty(
             code_section.get("insight"),
@@ -227,6 +231,16 @@ class ParamMitraAgent:
                 default_insight=efficiency_insight,
             )
 
+        burnout_risk = self._first_non_empty(wellness_section.get("burnout_risk"), default="low")
+        wellness_insight = self._first_non_empty(wellness_section.get("insight"), default="Pacing looks healthy.")
+        wellness_habit = self._first_non_empty(wellness_section.get("micro_habit"), default="Drink water and take a 5-minute screen break.")
+        
+        wellness_section_norm = {
+            "burnout_risk": burnout_risk,
+            "insight": wellness_insight,
+            "micro_habit": wellness_habit,
+        }
+
         cheer = self._first_non_empty(
             audit.get("cheer"),
             default="Keep going. The week is still yours."
@@ -239,6 +253,7 @@ class ParamMitraAgent:
             "communication": communication_section,
             "strategic_alignment": strategic_alignment,
             "efficiency": efficiency_section,
+            "wellness": wellness_section_norm,
             "cheer": cheer,
             "raw_context": {
                 "git_summary": git_summary,
@@ -256,6 +271,7 @@ class ParamMitraAgent:
         prompt = f"""You are Param Mitra — a wise, warm, honest Guru who is also a best friend.
 Generate a weekly insight report based on this data:
 
+Historical Context (Last week): {context.get('historical_context', 'No past context available.')}
 Strategic Risks (from Auditor): {context.get('auditor_risks', 'No risks flagged.')}
 User Long-term Goals: {context.get('user_goals', 'No goals set.')}
 
@@ -269,6 +285,8 @@ Rules:
 - Be encouraging first. Celebrate genuine wins.
 - For communication, specifically look for tone. If someone was harsh or transactional, quote an instance.
 - Assess 'Strategic Alignment': Are current tasks actually moving the needle on the User's Long-term Goals?
+- Wellness & Burnout: Look at timestamps/volume. Are they working crazy hours? Call it out.
+- Micro-Habits: Give one specific, 2-minute actionable habit per section instead of just generic advice.
 - Only suggest a training if there is a REAL gap. If things look good, say so warmly.
 - Cheer: end with a short personal motivational line (not generic).
 
@@ -279,11 +297,13 @@ Return ONLY valid JSON, no markdown:
   "code": {{
     "assessment": "great" | "good" | "needs_improvement",
     "insight": "Specific observation about code quality, commit messages, PR activity this week.",
+    "micro_habit": "A tiny 2-minute habit to improve this.",
     "training": null
   }},
   "communication": {{
     "assessment": "great" | "good" | "needs_improvement",
-    "insight": "Specific observation about tone. If negative, include a quote like 'You replied to X in a harsh manner when you said...'",
+    "insight": "Specific observation about tone.",
+    "micro_habit": "A tiny 2-minute habit to improve this.",
     "training": null
   }},
   "strategic_alignment": {{
@@ -294,7 +314,13 @@ Return ONLY valid JSON, no markdown:
   "efficiency": {{
     "assessment": "great" | "good" | "needs_improvement",
     "insight": "Specific observation about task completion, priorities, focus.",
+    "micro_habit": "A tiny 2-minute habit to improve this.",
     "training": null
+  }},
+  "wellness": {{
+    "burnout_risk": "high" | "medium" | "low",
+    "insight": "Observation on pacing and work hours.",
+    "micro_habit": "A habit for well-being."
   }},
   "cheer": "Short personal motivational line."
 }}
@@ -332,12 +358,38 @@ If assessment is 'needs_improvement', populate training as:
                 "efficiency": {
                     "assessment": "needs_improvement",
                     "insight": "A few tasks are moving, but the week needs a stronger finish line.",
+                    "micro_habit": "End your day by writing down 1 top priority for tomorrow.",
                     "training": {
                         "topic": "Weekly prioritization",
                         "why": "A tighter planning loop can help you finish more of the right work.",
                         "link_hint": "Coursera / YouTube / Book",
                     },
                 },
+                "wellness": {
+                    "burnout_risk": "low",
+                    "insight": "Work hours look reasonable based on task completions.",
+                    "micro_habit": "Take a 5-minute walk outside after lunch.",
+                },
                 "cheer": "Small course corrections now will compound quickly. You've got this.",
             }
             return self._normalize_audit(fallback, context)
+
+    async def check_accountability(self, task_title: str, delay_count: int, context: Dict[str, Any]) -> str:
+        """Proactively intercepts user when a task is delayed repeatedly."""
+        prompt = f"""You are Param Mitra, a life coach. The user has delayed a high-priority task '{task_title}' {delay_count} times.
+        Look at their current context: {context.get('task_status', 'Busy')}
+        Write a short, punchy, 2-sentence empathetic intervention asking WHY they are avoiding it, and suggesting breaking it down.
+        Return raw text only.
+        """
+        try:
+            raw = await self.llm.call(prompt)
+            # LLM might return JSON or raw text depending on how call handles it
+            try:
+                import json
+                data = json.loads(raw)
+                return data.get("response", data.get("cheer", "Are we avoiding this? Let's break it down."))
+            except Exception:
+                return raw.strip()
+        except Exception as e:
+            logger.error(f"Accountability check failed: {e}")
+            return f"I see you've delayed '{task_title}' again. Are we avoiding this because it's poorly scoped, or are you just overwhelmed? Let's break it down."
