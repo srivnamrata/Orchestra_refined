@@ -1867,6 +1867,7 @@ html.dark .completion-toast { box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1p
             <button class="intel-tab" onclick="switchIntel('tasks',this)">✅ Tasks <span class="intel-tab-count">6</span></button>
             <button class="intel-tab" onclick="switchIntel('schedule',this)">📅 Schedule <span class="intel-tab-count">4</span></button>
             <button class="intel-tab" onclick="switchIntel('guru',this)">🧘 Param Mitra <span class="intel-tab-count">!</span></button>
+            <button class="intel-tab" onclick="switchIntel('veda',this)">📚 Veda Library</button>
           </div>
         </div>
         <div class="intel-head-right">
@@ -1924,6 +1925,19 @@ html.dark .completion-toast { box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1p
               <span class="ms" style="font-size:32px;display:block;margin-bottom:10px;color:var(--g-amber)">self_improvement</span>
               Param Mitra is ready to read your week. <br><br><button class="intel-btn primary" onclick="runGuruAudit()">Analyze</button>
             </div>
+          </div>
+        </div>
+
+        <div class="intel-pane" id="pane-veda">
+          <div class="intel-source-label" style="display:flex;justify-content:space-between;align-items:center">
+             <span>Veda Library · Reading List</span>
+             <button class="intel-btn" onclick="fetchBooks()"><span class="ms sm">refresh</span></button>
+          </div>
+          <div style="padding:10px 14px">
+              <input type="text" id="veda-input" placeholder="Talk to Veda: 'Add Atomic Habits' or 'Log 20 pages...'" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid var(--md-border);color:white;padding:10px 14px;border-radius:10px;font-size:13px;outline:none" onkeydown="if(event.key==='Enter') submitVeda(this.value)">
+          </div>
+          <div id="bookshelf" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;padding:0 14px 14px">
+              <!-- Books will render here -->
           </div>
         </div>
 
