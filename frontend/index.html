@@ -1746,34 +1746,8 @@ html.dark .completion-toast { box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1p
           </div>
         </div>
 
-        <!-- Live Reasoning Trace -->
+        <!-- Silent Bottlenecks -->
         <div class="trace-card">
-          <div class="trace-head">
-            <div style="display:flex;align-items:center;gap:8px;">
-              <div class="trace-title">🧠 Live Agent Reasoning</div>
-              <div class="scan-state">
-                <span class="scan-dot idle" id="scanDot"></span>
-                <span class="scan-label" id="scanLabel">Idle</span>
-              </div>
-            </div>
-            <div class="trace-btns">
-              <button class="trace-btn" onclick="clearScan()">Clear</button>
-              <button class="trace-btn run" id="runScanBtn" onclick="runScan()"><span class="ms sm">radar</span> Run Scan</button>
-            </div>
-          </div>
-          <div class="trace-agent-tabs">
-            <button class="trace-tab active" onclick="switchTraceAgent('orchestrator',this)">Orchestrator</button>
-            <button class="trace-tab" onclick="switchTraceAgent('critic',this)">Critic</button>
-            <button class="trace-tab" onclick="switchTraceAgent('auditor',this)">Auditor</button>
-            <button class="trace-tab" onclick="switchTraceAgent('researcher',this)">Researcher</button>
-          </div>
-          <div class="trace-idle" id="traceIdle">
-            <div class="idle-icon">🧠</div>
-            <div class="idle-title">Watch agents think in real time</div>
-            <div class="idle-desc">Cross-referencing tasks, calendar, GitHub, Slack and email to surface bottlenecks proactively.</div>
-            <div class="idle-hint">Click Run Scan to begin…</div>
-          </div>
-          <div class="trace-body" id="trace"></div>
           <div class="bottlenecks-section" id="bottlenecks">
             <div class="bn-head">
               <div class="bn-title">🚨 Silent Bottlenecks</div>
@@ -2115,100 +2089,7 @@ function runDemo(type){
   feedData.unshift({time:t,agent:m.agent,color:m.color,cbg:m.cbg,text:m.text,tag:'status'});feedFilter='all';document.querySelectorAll('.feed-tab').forEach((b,i)=>b.classList.toggle('active',i===0));renderFeed();
 }
 
-// Live Reasoning Trace
-const traceData={ orchestrator:[], critic:[], auditor:[], researcher:[] };
-let scanRunning=false, activeTraceAgent='orchestrator';
-let liveTraceSocket = null;
 
-function connectLiveTrace() {
-  if (liveTraceSocket) return;
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const wsUrl = `${protocol}//${window.location.host}/ws/trace`;
-  liveTraceSocket = new WebSocket(wsUrl);
-
-  liveTraceSocket.onopen = () => {
-    console.log("WebSocket Trace Connected");
-    scanRunning = true;
-    document.getElementById('scanDot').className='scan-dot running';
-    document.getElementById('scanLabel').textContent='Live Stream Connected';
-    document.getElementById('runScanBtn').disabled=true;
-    document.getElementById('traceIdle').style.display='none';
-    document.getElementById('trace').style.display='block';
-    document.getElementById('bottlenecks').style.opacity='0.3';
-    
-    // Add connection line
-    appendTraceLine(activeTraceAgent, '<span style="color:var(--g-green)">Connected to live event stream...</span>', false);
-  };
-
-  liveTraceSocket.onmessage = (e) => {
-    try {
-      const data = JSON.parse(e.data);
-      const ag = (data.agent || 'orchestrator').toLowerCase();
-      if (!traceData[ag]) traceData[ag] = [];
-      const msg = data.message || data.status;
-      const formattedAgent = ag.charAt(0).toUpperCase() + ag.slice(1);
-      
-      traceData[ag].push({ agent: formattedAgent, msg: msg });
-      
-      if (activeTraceAgent === ag) {
-        appendTraceLine(formattedAgent, msg, false);
-      }
-    } catch(err) { console.error("Error parsing trace event", err); }
-  };
-
-  liveTraceSocket.onclose = () => {
-    console.log("WebSocket Trace Disconnected");
-    liveTraceSocket = null;
-    scanRunning = false;
-    document.getElementById('scanLabel').textContent='Disconnected';
-    document.getElementById('scanDot').className='scan-dot idle';
-    document.getElementById('runScanBtn').disabled=false;
-    // Auto reconnect
-    setTimeout(connectLiveTrace, 5000);
-  };
-}
-
-function appendTraceLine(agentName, msg, cursor) {
-  const traceEl = document.getElementById('trace');
-  const div = document.createElement('div');
-  div.className = 'trace-line';
-  div.style.opacity = '1';
-  div.innerHTML = `<span class="trace-agent">${agentName}</span><span> → ${msg}${cursor?' <span class="trace-cursor"></span>':''}</span>`;
-  traceEl.appendChild(div);
-  traceEl.scrollTop = traceEl.scrollHeight;
-}
-
-function runScan(){
-  connectLiveTrace();
-}
-
-function switchTraceAgent(agent, btn){
-  activeTraceAgent = agent;
-  document.querySelectorAll('.trace-agent-tabs .trace-tab').forEach(t=>t.classList.remove('active')); 
-  btn.classList.add('active');
-  const traceEl = document.getElementById('trace');
-  if(traceEl.style.display !== 'none'){
-    traceEl.innerHTML = '';
-    (traceData[agent]||[]).forEach(line => {
-      appendTraceLine(line.agent, line.msg, line.cursor);
-    });
-  }
-}
-
-function clearScan(){
-  if(liveTraceSocket) { liveTraceSocket.close(); liveTraceSocket = null; }
-  scanRunning = false;
-  document.getElementById('scanDot').className='scan-dot idle';
-  document.getElementById('scanLabel').textContent='Idle';
-  document.getElementById('runScanBtn').disabled=false;
-  document.getElementById('traceIdle').style.display='flex';
-  const t = document.getElementById('trace');
-  t.style.display='none'; t.innerHTML='';
-  document.getElementById('bottlenecks').style.opacity='1';
-  
-  // Clear stored data
-  Object.keys(traceData).forEach(k => traceData[k] = []);
-}
 function dismissBn(id){const el=document.getElementById(id);if(!el)return;el.style.transition='all 0.25s';el.style.opacity='0';el.style.maxHeight=el.offsetHeight+'px';setTimeout(()=>{el.style.maxHeight='0';el.style.padding='0';},50);setTimeout(()=>el.remove(),320);}
 function reviewBn(btn,source){btn.textContent='✓ Reviewing…';btn.style.background='var(--g-green-light)';btn.style.color='var(--g-green)';btn.style.borderColor='rgba(30,142,62,0.2)';btn.disabled=true;const n=new Date(),t=`${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}`;const lbls={github:'PR #42 review',slack:'#backend reply',email:'launch sign-off reply'};feedData.unshift({time:t,agent:'ORCHESTRATOR',color:'var(--g-green)',cbg:'var(--g-green-light)',text:`Acting on bottleneck: <span class="f-hl" style="color:var(--g-green)">${lbls[source]}</span> — drafting response…`,tag:'tasks'});renderFeed();}
 
