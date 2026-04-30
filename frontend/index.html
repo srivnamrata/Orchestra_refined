@@ -3239,8 +3239,8 @@ function finishOnboard() {
 
 // Override renderFeed to show empty state when no entries
 const _origRenderFeed = renderFeed;
-function renderFeed() {
-  _origRenderFeed();
+window.renderFeed = function() {
+  if (typeof _origRenderFeed === 'function') _origRenderFeed();
   const feed = document.getElementById('feed');
   if(feed && feed.children.length === 0) {
     feed.innerHTML = `
