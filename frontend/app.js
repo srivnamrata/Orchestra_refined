@@ -2998,7 +2998,6 @@ const voiceInput = {
     init() {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!SpeechRecognition) {
-        if (!SpeechRecognition) {
             // Hide mic button if not supported
             const micBtn = document.getElementById('nl-mic-btn') || document.getElementById('goalMicBtn');
             if (micBtn) micBtn.style.display = 'none';

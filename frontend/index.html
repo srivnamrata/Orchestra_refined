@@ -1521,7 +1521,7 @@ html.dark .completion-toast { box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1p
       <div class="user-email">admin@orchestra.ai</div>
     </div>
     <button class="user-gear"><span class="ms">settings</span></button>
-    <button class="user-logout" onclick="window.location.href='login.html'" title="Logout"><span class="ms">logout</span></button>
+    <button class="user-logout" onclick="localStorage.removeItem('orch-session-token'); window.location.href='login.html'" title="Logout"><span class="ms">logout</span></button>
   </div>
 </aside>
 
@@ -1593,7 +1593,7 @@ html.dark .completion-toast { box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1p
           </div>
           <div class="usb-r-text">
             <div class="usb-r-title">Intelligence</div>
-            <div class="usb-r-sub">News & Tasks</div>
+            <div class="usb-r-sub">Analytics, News & Tasks</div>
           </div>
         </div>
       </div>
