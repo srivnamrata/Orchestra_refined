@@ -1,0 +1,63 @@
+--- /Users/Shared/Orchestra_refined/frontend/index.html
++++ /Users/Shared/Orchestra_refined/frontend/index.html
+@@ -1597,7 +1597,7 @@
+           </div>
+         </div>
+       </div>
+-      <div class="usb-reasoning" style="border-radius: 0;">
++      <div class="usb-reasoning" onclick="document.getElementById('integrationsOverlay').classList.add('open');" style="border-radius: 0;">
+         <div style="display:flex; align-items:center;">
+           <div class="usb-r-icon">
+             <span class="ms" style="color:white; font-size:22px;">extension</span>
+@@ -3701,5 +3701,55 @@
+     window.activityFeed.log(msg, 'success', 'GOAL_MGR');
+   }
+ }
++
++function closeIntegrations() {
++  document.getElementById('integrationsOverlay').classList.remove('open');
++}
+ </script>
++
++<!-- Integrations Overlay -->
++<div class="onboard-overlay" id="integrationsOverlay">
++  <div class="onboard-card">
++    <div class="onboard-head">
++      <div></div>
++      <div class="onboard-brand">
++        <div class="brand-logo" style="width:24px;height:24px">
++          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
++            <circle cx="12" cy="12" r="10" fill="white" opacity="0.2"/>
++            <path d="M12 6l2 4h4l-3 3 1 4-4-2-4 2 1-4-3-3h4z" fill="white"/>
++          </svg>
++        </div>
++        Orchestra Integrations
++      </div>
++      <button class="onboard-skip" onclick="closeIntegrations()">Close</button>
++    </div>
++
++    <div class="onboard-body">
++      <div class="onboard-step-label">Manage Connections</div>
++      <div class="onboard-title">Connect your tools</div>
++      <div class="onboard-sub">Orchestra surfaces bottlenecks from GitHub, Slack, and Email automatically.</div>
++      
++      <div class="onboard-integrations">
++        <div class="onboard-integration" id="intg-0"><div class="oi-icon">🐙</div><div class="oi-info"><div class="oi-name">GitHub</div><div class="oi-desc">PRs, issues, CI status, code review alerts</div></div><button class="oi-btn connect" onclick="connectIntegration(0,this)">Connect</button></div>
++        <div class="onboard-integration" id="intg-1"><div class="oi-icon">💬</div><div class="oi-info"><div class="oi-name">Slack</div><div class="oi-desc">Mentions, channel messages, deploy updates</div></div><button class="oi-btn connect" onclick="connectIntegration(1,this)">Connect</button></div>
++        <div class="onboard-integration" id="intg-2"><div class="oi-icon">📧</div><div class="oi-info"><div class="oi-name">Email</div><div class="oi-desc">Inbox flags, approvals, overdue replies</div></div><button class="oi-btn connect" onclick="connectIntegration(2,this)">Connect</button></div>
++        <div class="onboard-integration" id="intg-3"><div class="oi-icon">🔌</div><div class="oi-info"><div class="oi-name">MCP Servers</div><div class="oi-desc">Add custom Model Context Protocol servers</div></div><button class="oi-btn connect" onclick="connectIntegration(3,this)">Connect</button></div>
++        <div class="onboard-integration" id="intg-4"><div class="oi-icon">📅</div><div class="oi-info"><div class="oi-name">Google Calendar</div><div class="oi-desc">Events, conflicts, scheduling context</div></div><button class="oi-btn connected" onclick="connectIntegration(4,this)">✓ Connected</button></div>
++      </div>
++    </div>
++
++    <div class="onboard-footer">
++      <div></div>
++      <div style="display:flex;gap:8px">
++        <button class="onboard-btn-primary" onclick="closeIntegrations()">Done</button>
++      </div>
++    </div>
++  </div>
++</div>
++
+ </body>
+ </html>
