@@ -1880,13 +1880,7 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e =
   try { if (!localStorage.getItem('orchestra-theme')) applyTheme(e.matches); } catch(err) { applyTheme(e.matches); }
 });
 
-// Clock
-function tick() {
-  const n=new Date(), days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], mons=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  document.getElementById('clock').textContent = `${days[n.getDay()]} ${mons[n.getMonth()]} ${n.getDate()} · ${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}`;
-}
-tick(); setInterval(tick,10000);
-
+// Clock removed
 // Animate bars on load
 setTimeout(() => {
   [['bar1',65],['bar2',45],['pii-bar',100],['goal-bar',96],['ethics-bar',94],['ah1',72],['ah2',55],['ah3',88],['ah4',40]].forEach(([id,w]) => {
