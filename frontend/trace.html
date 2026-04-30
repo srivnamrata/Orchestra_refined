@@ -1016,35 +1016,38 @@ setTimeout(()=>{
   if(first) first.click();
 },300);
 
-// ── Live WebSocket Connection ──
-let traceWs = null;
+// ── Live SSE Connection ──
+let traceStream = null;
 let eventCounter = 0;
 
 function connectLiveTrace() {
-  if(traceWs) return;
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const url = `${protocol}//${window.location.host}/ws/trace`;
-  traceWs = new WebSocket(url);
+  if(traceStream) return;
+  const protocol = window.location.protocol;
+  const url = `${protocol}//${window.location.host}/api/workflows/thought-trace/stream`;
+  // Wait, does the backend have /api/workflows prefix? I checked workflows.py and it didn't, but the proxy might. I will just use /thought-trace/stream since app.py includes router at root.
   
-  traceWs.onopen = () => console.log('Connected to trace WebSocket');
+  traceStream = new EventSource(`/thought-trace/stream`);
   
-  traceWs.onmessage = (e) => {
+  traceStream.onopen = () => console.log('Connected to trace SSE stream');
+  
+  traceStream.addEventListener('thought', (e) => {
     try {
       const data = JSON.parse(e.data);
       const agentId = (data.agent || 'orchestrator').toLowerCase();
       
       const n = new Date();
-      const time = `${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}`;
+      const time = data.ts || `${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}`;
       eventCounter++;
       
       // Determine type based on thought_type
       let type = 'task';
-      if(data.thought_type === 'alert') type = 'error';
-      else if(data.thought_type === 'result') type = 'output';
-      else if(data.thought_type === 'dialogue') type = 'decision';
+      if(data.type === 'alert' || data.type === 'error') type = 'error';
+      else if(data.type === 'result' || data.type === 'output') type = 'output';
+      else if(data.type === 'dialogue' || data.type === 'decision') type = 'decision';
+      else if(data.type === 'finding') type = 'decision';
       
-      const title = data.status === 'thinking' ? 'Reasoning step' : (data.thought_type === 'action' ? 'Executing action' : 'Agent log');
-      const textRaw = data.message || data.status;
+      const title = data.status === 'thinking' ? 'Reasoning step' : (data.type === 'action' ? 'Executing action' : 'Agent log');
+      const textRaw = data.message || data.status || '';
       // Strip HTML
       const detail = textRaw.replace(/<[^>]*>?/gm, '');
       
@@ -1066,7 +1069,6 @@ function connectLiveTrace() {
       
       EVENTS.push(newEv);
       
-      // If we just got the very first event, automatically click it after render
       const isFirst = EVENTS.length === 1;
       
       renderTimeline(activeFilter);
@@ -1081,13 +1083,14 @@ function connectLiveTrace() {
       
       // Auto scroll to bottom
       const scroll = document.getElementById('tlScroll');
-      scroll.scrollTop = scroll.scrollHeight;
+      if(scroll) scroll.scrollTop = scroll.scrollHeight;
       
-    } catch(err) { console.error('WS error', err); }
-  };
+    } catch(err) { console.error('SSE parse error', err); }
+  });
   
-  traceWs.onclose = () => {
-    traceWs = null;
+  traceStream.onerror = () => {
+    traceStream.close();
+    traceStream = null;
     setTimeout(connectLiveTrace, 5000); // auto reconnect
   };
 }
