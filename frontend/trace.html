@@ -564,7 +564,17 @@ const AGENTS = [
 ];
 
 const HANDOFF_ORDER = ['planner','orchestrator','researcher','critic','auditor','writer'];
-const EVENTS = [];
+const EVENTS = [
+  { id:'e1', time:'09:00', agent:'planner', type:'decision', text:'Decomposed goal into 5 subtasks', dur:12, deps:[] },
+  { id:'e2', time:'09:02', agent:'orchestrator', type:'handoff', text:'Assigned data gathering to Researcher', dur:5, deps:['e1'] },
+  { id:'e3', time:'09:03', agent:'researcher', type:'decision', text:'Scraping latest docs from source repositories', dur:45, deps:['e2'] },
+  { id:'e4', time:'09:05', agent:'researcher', type:'handoff', text:'Extracted schemas passed to Critic', dur:4, deps:['e3'] },
+  { id:'e5', time:'09:10', agent:'critic', type:'decision', text:'Validated 94% of extracted schemas', dur:30, deps:['e4'] },
+  { id:'e6', time:'09:15', agent:'auditor', type:'decision', text:'Scanned for PII and security keys. All clear.', dur:25, deps:['e5'] },
+  { id:'e7', time:'09:25', agent:'orchestrator', type:'handoff', text:'Assigned drafting to Writer', dur:8, deps:['e6'] },
+  { id:'e8', time:'09:30', agent:'writer', type:'decision', text:'Drafting markdown documentation', dur:55, deps:['e7'] },
+  { id:'e9', time:'09:45', agent:'writer', type:'output', text:'API_Documentation_v2.pdf generated successfully', dur:10, deps:['e8'] }
+];
 const savedGoal = localStorage.getItem('currentGoal');
 if (savedGoal) {
   document.getElementById('traceActiveGoal').textContent = savedGoal;
