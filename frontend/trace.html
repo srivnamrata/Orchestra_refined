@@ -564,12 +564,26 @@ const AGENTS = [
 ];
 
 const HANDOFF_ORDER = ['planner','orchestrator','researcher','critic','auditor','writer'];
-const EVENTS = [
-  { id:'lv1', time:'09:00', agent:'orchestrator', type:'decision', title:'Initialize workflow', detail:'Received user prompt: API Documentation', tags:['trigger'], reasoning:['Parsed prompt', 'Identified requirements'], input:'API Documentation', output:'Workflow plan', handoffTo:'planner', decision:'Route to Planner' },
-  { id:'lv2', time:'09:01', agent:'planner', type:'task', title:'Decompose task', detail:'Broke down API documentation into 3 subtasks', tags:['planning'], reasoning:['Analyzed endpoints', 'Created draft structure'], input:'Workflow plan', output:'3 Subtasks', handoffTo:'researcher', decision:'Hand off to Researcher' },
-  { id:'lv3', time:'09:03', agent:'researcher', type:'task', title:'Gather specs', detail:'Searched codebase for endpoint definitions', tags:['search'], reasoning:['Found 12 endpoints', 'Extracted parameters'], input:'3 Subtasks', output:'Raw specs', handoffTo:'writer', decision:'Hand off to Writer' },
-  { id:'lv4', time:'09:05', agent:'writer', type:'task', title:'Draft documentation', detail:'Writing OpenAPI swagger docs', tags:['drafting', 'live'], reasoning:['Formatting paths', 'Adding descriptions'], input:'Raw specs', output:'Draft docs', handoffTo:null, decision:'Working...' }
-];
+const EVENTS = [];
+const savedGoal = localStorage.getItem('currentGoal') || 'Analyze server logs from production-db-1 over the past 24 hours to identify root cause of latency spikes, and generate a recommended mitigation plan.';
+document.getElementById('traceActiveGoal').textContent = savedGoal;
+// Add a seeded event based on the actual goal
+EVENTS.push({
+  id: 'e_init',
+  time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+  agent: 'orchestrator',
+  type: 'decision',
+  title: 'Received User Goal',
+  detail: `Parsed and decomposed user goal: "${savedGoal}"`,
+  tags: ['planning'],
+  filter: 'all',
+  reasoning: [`Starting planning phase for goal: ${savedGoal}`],
+  input: savedGoal,
+  output: '-',
+  handoffTo: ['researcher', 'planner'],
+  decision: 'Proceed with distributed execution'
+});
+
 
 // ── Build agent color maps ──
 const agentMap = {};

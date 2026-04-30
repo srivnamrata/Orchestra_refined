@@ -1262,7 +1262,7 @@ html.dark .palette { box-shadow: 0 24px 64px rgba(0,0,0,0.55), 0 0 0 1px rgba(25
 
 .palette-search-row {
   display: flex; align-items: center; gap: 12px;
-  padding: 16px 20px;
+  padding: 12px 20px;
   border-bottom: 1px solid var(--glass-border);
 }
 .palette-search-icon { color: var(--md-muted); font-size: 20px !important; flex-shrink: 0; }
@@ -1482,7 +1482,7 @@ html.dark .completion-toast { box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1p
     <div class="nav-label">Workspace</div>
     <div class="nav-item active"><span class="ms">home</span> Dashboard</div>
     <div class="nav-item" onclick="if(typeof triggerTaskDemo==='function') triggerTaskDemo(); else alert('Opening Tasks');" style="cursor:pointer;"><span class="ms">task_alt</span> All Tasks <span class="nav-badge nb-gray">24</span></div>
-    <div class="nav-item" onclick="if(typeof triggerResearchDemo==='function') triggerResearchDemo(); else alert('Opening Outputs');" style="cursor:pointer;"><span class="ms">folder_open</span> Outputs</div>
+    <div class="nav-item" onclick="window.location.href='/analytics'" style="cursor:pointer;"><span class="ms">folder_open</span> Outputs</div>
         <!-- Silent Bottlenecks -->
         <div class="bottlenecks-section" id="bottlenecks" style="margin: 12px 10px; padding: 12px; background: var(--md-surface-1); border-radius: var(--radius-md); border: 1px solid var(--md-surface-2);">
             <div class="bn-head">
@@ -1549,8 +1549,8 @@ html.dark .completion-toast { box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1p
     </div>
 
     <!-- Main Prompt Bar -->
-    <div class="main-goal anim a1" style="margin-bottom: 24px;">
-      <div class="goal-box" style="padding: 16px 20px; border-radius: var(--radius-xl); background: var(--md-surface); box-shadow: var(--shadow-1);">
+    <div class="main-goal anim a1" style="margin-bottom: 12px;">
+      <div class="goal-box" style="padding: 12px 20px; border-radius: var(--radius-xl); background: var(--md-surface); box-shadow: var(--shadow-1);">
         <textarea class="goal-input" id="goalInput"
           placeholder="What would you like the Orchestra to orchestrate today?"
           style="font-size: 15px; min-height: 44px;"
@@ -1607,7 +1607,7 @@ html.dark .completion-toast { box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1p
       <div class="usb-divider"></div>
 
       <!-- Middle: Analytics -->
-      <div class="usb-analytics" style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; padding:12px 0;">
+      <div class="usb-analytics" style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; padding:8px 0;">
         <div class="usb-stat" onclick="window.location.href='/analytics'" style="display:flex; flex-direction:row; align-items:baseline; gap:8px;">
           <div class="usb-num" style="font-size:20px;">247</div>
           <div class="usb-lbl" style="font-size:11px;">Tasks Completed</div>
@@ -2073,6 +2073,7 @@ async function submitGoal() {
   const t = `${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}`;
   
   // Add user message to feed
+  localStorage.setItem('currentGoal', val);
   feedData.unshift({time:t, agent:'YOU', color:'var(--md-on-surface)', cbg:'var(--md-surface-1)', text:val, tag:'tasks'});
   feedData.splice(8);
   feedFilter = 'all';
@@ -2498,7 +2499,7 @@ html.dark .palette {
 /* Search row */
 .palette-search-row {
   display: flex; align-items: center; gap: 12px;
-  padding: 16px 20px;
+  padding: 12px 20px;
   border-bottom: 1px solid var(--glass-light-border);
 }
 .palette-search-icon {
@@ -3488,6 +3489,7 @@ const ONBOARD_STEPS = [
           {icon:'🐙',name:'GitHub',desc:'PRs, issues, CI status, code review alerts',connected:false},
           {icon:'💬',name:'Slack',desc:'Mentions, channel messages, deploy updates',connected:false},
           {icon:'📧',name:'Email',desc:'Inbox flags, approvals, overdue replies',connected:false},
+          {icon:'🔌',name:'MCP Servers',desc:'Add custom Model Context Protocol servers',connected:false},
           {icon:'📅',name:'Google Calendar',desc:'Events, conflicts, scheduling context',connected:true},
         ].map((i,idx)=>`
           <div class="onboard-integration" id="oi-${idx}">
@@ -3566,8 +3568,13 @@ function onboardPrev() {
 }
 
 function connectIntegration(idx, btn) {
-  btn.textContent = '✓ Connected';
-  btn.className = 'oi-btn connected';
+  const isMCP = btn.parentElement.querySelector('.oi-name').textContent.includes('MCP');
+  const msg = isMCP ? "Enter MCP Server URL:" : "Enter Integration ID/Token:";
+  const val = prompt(msg);
+  if (val) {
+    btn.textContent = '✓ Connected';
+    btn.className = 'oi-btn connected';
+  }
 }
 
 function setOnboardGoal(text) {
@@ -3588,7 +3595,7 @@ function finishOnboard() {
 // Show on first visit
 (function() {
   let done;
-  try { done = localStorage.getItem('orchestra-onboarded'); } catch(e){}
+  done = false; // Forced for demonstration
   if(!done) {
     setTimeout(() => {
       document.getElementById('onboardOverlay').classList.add('open');
