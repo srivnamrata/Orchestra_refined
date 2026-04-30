@@ -564,97 +564,6 @@ const AGENTS = [
 ];
 
 const HANDOFF_ORDER = ['planner','orchestrator','researcher','critic','auditor','writer'];
-
-const EVENTS = [
-  // 09:41
-  { id:'e1',  time:'09:41', agent:'planner',      type:'decision', title:'Decompose goal into subtasks',              detail:'Received user goal. Identified 4 parallel subtasks.',          tags:['4 subtasks','parallel'],      filter:'decision',
-    reasoning:['Parse user intent: API Documentation Workflow','Identify scope: endpoints, schemas, error handling, examples','Decompose into 4 subtasks with dependency graph','Assign priority order: Research → Review → Write → Audit'],
-    input:'User goal: "Create comprehensive API documentation for v2.3 endpoints"',
-    output:'4 subtasks defined. Dependency graph created. Priority queue initialised.',
-    handoffTo:'orchestrator', decision:'Sequential decompose → parallel assign → monitor'
-  },
-  { id:'e2',  time:'09:41', agent:'orchestrator', type:'decision', title:'Assign agents to subtasks',                  detail:'Matched agents to subtasks by capability.',                     tags:['4 agents assigned'],          filter:'decision',
-    reasoning:['Receive subtask graph from Planner','Match each subtask to best-fit agent by capability profile','Check agent availability and current load','Dispatch assignments with context packages'],
-    input:'4 subtasks from Planner + agent capability matrix',
-    output:'Researcher: subtask 1+2 · Critic: subtask 3 · Auditor: ongoing monitoring',
-    handoffTo:'researcher', decision:'Capability match → load check → dispatch'
-  },
-  // 09:42
-  { id:'e3',  time:'09:42', agent:'researcher',   type:'task',     title:'Fetch API endpoint schemas',                 detail:'Crawled 14 live endpoints from API spec v2.3.',                tags:['14 endpoints','structured'],   filter:'all',
-    reasoning:['Parse API spec v2.3 for all endpoints','Filter deprecated and legacy routes (3 removed)','Extract schemas using structured extraction (3× faster than raw crawl)','Validate response shapes against OpenAPI spec'],
-    input:'API spec v2.3 document · endpoint whitelist',
-    output:'14 endpoint schemas · 3 deprecated filtered · schemas.json 48KB',
-    files:['schemas.json','endpoint-list.csv','deprecated-log.txt'],
-    handoffTo:null, decision:'Structured crawl → validate → deliver'
-  },
-  { id:'e4',  time:'09:42', agent:'auditor',      type:'task',     title:'Begin continuous safety monitoring',         detail:'PII scan + goal alignment check initiated.',                   tags:['PII scan','continuous'],       filter:'all',
-    reasoning:['Set up regex pattern match for PII (names, emails, API keys, tokens)','Initialise goal alignment scoring (cosine similarity on task outputs)','Configure continuous monitoring stream — fires on every agent output'],
-    input:'Agent output stream · PII pattern library · goal definition',
-    output:'Monitoring active. Baseline established. First scan: clean.',
-    handoffTo:null, decision:'Setup → baseline → continuous watch'
-  },
-  // 09:43
-  { id:'e5',  time:'09:43', agent:'critic',       type:'decision', title:'Flag scope creep in subtask 3',              detail:'Subtask 3 bundled two separate concerns.',                      tags:['⚠ scope creep','replanned'],  filter:'decision',
-    reasoning:['Receive subtask 3: "Document endpoints and write error handling guide"','Identify dual ownership: endpoints (Researcher) vs error handling (Writer)','Estimate risk: different review cycles, different audiences','Recommend split: reduces scope creep risk by 34%'],
-    input:'Subtask 3 definition from Orchestrator',
-    output:'Replan request sent to Orchestrator. Subtask 3 split into 3a + 3b.',
-    handoffTo:'orchestrator', decision:'Detect dual concern → risk assess → flag replan'
-  },
-  { id:'e6',  time:'09:43', agent:'orchestrator', type:'decision', title:'Accept Critic replan — merge subtasks 2+3',  detail:'Merged subtasks save 40 min and reduce token cost 22%.',       tags:['replan accepted','optimised'], filter:'decision',
-    reasoning:['Receive Critic flag on subtask 3','Evaluate merge option: subtasks 2+3 share same API context window','Calculate savings: 40 min time, 22% token reduction','Accept replan — update dependency graph and reassign'],
-    input:'Critic replan request · current task graph · token cost model',
-    output:'Updated task graph. Subtasks 2+3 merged. Writer reassigned.',
-    handoffTo:'writer', decision:'Evaluate → cost-benefit → accept merge'
-  },
-  // 09:45
-  { id:'e7',  time:'09:45', agent:'researcher',   type:'output',   title:'Deliver research bundle to Writer',          detail:'14 schemas + G2 competitor analysis packaged.',                tags:['handoff','3 files'],           filter:'output',
-    reasoning:['Compile all extracted schemas into structured bundle','Add inline annotations for ambiguous endpoints','Package with metadata: source, confidence, timestamp','Compress and deliver to Writer context window'],
-    input:'14 endpoint schemas · 3 competitor docs · review notes',
-    output:'research-bundle.zip delivered to Writer. 3 files, 84KB total.',
-    files:['schemas-annotated.json','competitor-analysis.md','metadata.json'],
-    handoffTo:'writer', decision:'Compile → annotate → package → deliver'
-  },
-  { id:'e8',  time:'09:45', agent:'auditor',      type:'task',     title:'PII scan: research bundle clean',            detail:'No PII found. Goal alignment 96%.',                            tags:['✓ clean','96% alignment'],     filter:'all',
-    reasoning:['Scan research-bundle.zip for PII patterns (0 matches)','Score goal alignment: research output vs original goal','4% gap: 2 legacy endpoints not in original scope but contextually relevant','Flag as acceptable — no action needed'],
-    input:'research-bundle.zip · goal definition · PII pattern library',
-    output:'PII: clean ✓ · Goal alignment: 96% · Legacy endpoint gap: acceptable',
-    handoffTo:null, decision:'Scan → score → threshold check → clear'
-  },
-  // 09:51
-  { id:'e9',  time:'09:51', agent:'critic',       type:'task',     title:'Review first Writer draft — section 1',      detail:'2 issues found: missing rate limit docs, unclear auth flow.',  tags:['2 issues','revision needed'],  filter:'all',
-    reasoning:['Receive section 1 draft from Writer','Check against API spec v2.3 for accuracy (12 endpoints checked)','Identify missing: rate limit documentation for /users endpoint','Identify unclear: OAuth flow description ambiguous for new developers'],
-    input:'Writer draft section 1 · API spec v2.3 · style guide',
-    output:'Review complete. 2 issues raised. Revision request sent to Writer.',
-    handoffTo:'writer', decision:'Spec check → gap analysis → issue log → revision request'
-  },
-  { id:'e10', time:'09:51', agent:'writer',        type:'task',    title:'Begin drafting — executive summary',          detail:'Drafting from Researcher bundle. ~1,200 words target.',        tags:['in progress','1.2k words'],    filter:'all',
-    reasoning:['Ingest research bundle from Researcher (84KB)','Load style guide and tone instructions (concise, technical, developer-friendly)','Outline: exec summary → endpoint reference → auth guide → error handling → examples','Begin drafting section 1: executive summary'],
-    input:'research-bundle.zip · style guide · outline template',
-    output:'Section 1 draft: 420 words. Sent to Critic for review.',
-    handoffTo:'critic', decision:'Ingest → outline → draft → review loop'
-  },
-  // 09:58
-  { id:'e11', time:'09:58', agent:'writer',        type:'output',  title:'Revised draft — all 6 sections complete',     detail:'2,380 words. All Critic issues resolved.',                    tags:['2,380 words','complete'],      filter:'output',
-    reasoning:['Receive Critic revision requests (2 issues)','Add rate limit documentation for /users endpoint','Rewrite OAuth flow with step-by-step numbered guide','Complete remaining 5 sections from outline','Final word count: 2,380 (target was 2,000–2,500)'],
-    input:'Critic revision requests · API spec v2.3 · research bundle',
-    output:'Complete documentation draft: 2,380 words across 6 sections.',
-    files:['api-docs-v1.0.md','api-docs-v1.0.pdf'],
-    handoffTo:'orchestrator', decision:'Revise → complete sections → deliver'
-  },
-  { id:'e12', time:'09:58', agent:'auditor',       type:'output',  title:'Final safety audit — all outputs clear',     detail:'Full scan passed. 0 PII, 98% goal alignment.',                tags:['✓ passed','98% alignment'],    filter:'output',
-    reasoning:['Run final PII scan on complete 2,380 word document (0 matches)','Score final goal alignment: 98% — improved from 96% after Writer additions','Cross-reference all 14 endpoint schemas against final doc (14/14 covered)','Issue safety certificate'],
-    input:'api-docs-v1.0.md · goal definition · PII library',
-    output:'Safety certificate issued. PII: clean. Goal alignment: 98%. Coverage: 100%.',
-    handoffTo:'orchestrator', decision:'Final scan → score → certify → deliver'
-  },
-  // 10:19
-  { id:'e13', time:'10:19', agent:'orchestrator', type:'output',   title:'Workflow complete — all deliverables ready',  detail:'3 files delivered. 38 min total. All agents done.',           tags:['✓ done','38m','3 files'],      filter:'output',
-    reasoning:['Collect all agent outputs: documentation + safety certificate + schemas','Run quality gate: word count ✓, coverage ✓, PII ✓, goal alignment 98% ✓','Package final deliverables','Mark workflow complete and notify user'],
-    input:'Writer output · Auditor certificate · Researcher schemas',
-    output:'3 deliverables ready. Workflow complete in 38 minutes.',
-    files:['api-docs-v1.0.pdf','api-docs-v1.0.md','schemas-final.json'],
-    handoffTo:null, decision:'Collect → quality gate → package → notify'
-  },
 ];
 
 // ── Build agent color maps ──
@@ -810,7 +719,7 @@ function renderTimeline(filter) {
               // We'll handle visual handoff via a spanning div approach — just note it
               bubble.style.position = 'relative';
               const badge = document.createElement('div');
-              badge.style.cssText = `position:absolute;bottom:-6px;right:10px;font-family:var(--font-mono);font-size:9px;background:${agentMap[ev.handoffTo]?.color||'#1a73e8'};color:white;padding:1px 6px;border-radius:100px;z-index:3;`;
+              badge.style.cssText = `position:absolute;bottom:6px;right:6px;font-family:var(--font-mono);font-size:9px;background:${agentMap[ev.handoffTo]?.color||'#1a73e8'};color:white;padding:2px 8px;border-radius:100px;z-index:3;font-weight:600;box-shadow:var(--shadow-1);`;
               badge.textContent = '→ ' + agentMap[ev.handoffTo]?.name;
               bubble.appendChild(badge);
             }
@@ -1106,6 +1015,85 @@ setTimeout(()=>{
   const first = document.querySelector('.event-bubble');
   if(first) first.click();
 },300);
+
+// ── Live WebSocket Connection ──
+let traceWs = null;
+let eventCounter = 0;
+
+function connectLiveTrace() {
+  if(traceWs) return;
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const url = `${protocol}//${window.location.host}/ws/trace`;
+  traceWs = new WebSocket(url);
+  
+  traceWs.onopen = () => console.log('Connected to trace WebSocket');
+  
+  traceWs.onmessage = (e) => {
+    try {
+      const data = JSON.parse(e.data);
+      const agentId = (data.agent || 'orchestrator').toLowerCase();
+      
+      const n = new Date();
+      const time = `${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}`;
+      eventCounter++;
+      
+      // Determine type based on thought_type
+      let type = 'task';
+      if(data.thought_type === 'alert') type = 'error';
+      else if(data.thought_type === 'result') type = 'output';
+      else if(data.thought_type === 'dialogue') type = 'decision';
+      
+      const title = data.status === 'thinking' ? 'Reasoning step' : (data.thought_type === 'action' ? 'Executing action' : 'Agent log');
+      const textRaw = data.message || data.status;
+      // Strip HTML
+      const detail = textRaw.replace(/<[^>]*>?/gm, '');
+      
+      const newEv = {
+        id: 'lv' + eventCounter,
+        time: time,
+        agent: agentId,
+        type: type,
+        title: title,
+        detail: detail,
+        tags: ['live stream'],
+        filter: type === 'task' ? 'all' : type,
+        reasoning: [detail],
+        input: 'Streamed live from backend',
+        output: '-',
+        handoffTo: null,
+        decision: '-'
+      };
+      
+      EVENTS.push(newEv);
+      
+      // If we just got the very first event, automatically click it after render
+      const isFirst = EVENTS.length === 1;
+      
+      renderTimeline(activeFilter);
+      renderRoster(); // updates load bars / tasks
+      
+      if(isFirst) {
+        setTimeout(()=>{
+          const first = document.querySelector('.event-bubble');
+          if(first) first.click();
+        }, 100);
+      }
+      
+      // Auto scroll to bottom
+      const scroll = document.getElementById('tlScroll');
+      scroll.scrollTop = scroll.scrollHeight;
+      
+    } catch(err) { console.error('WS error', err); }
+  };
+  
+  traceWs.onclose = () => {
+    traceWs = null;
+    setTimeout(connectLiveTrace, 5000); // auto reconnect
+  };
+}
+
+// Start connection
+connectLiveTrace();
 </script>
 </body>
 </html>

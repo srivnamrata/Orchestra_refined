@@ -1522,10 +1522,7 @@ html.dark .completion-toast { box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1p
   <!-- Topbar -->
   <div class="topbar">
     <div class="tb-left">
-      <div class="page-title">Dashboard</div>
-      <div class="tb-clock" id="clock"></div>
     </div>
-
     <div class="tb-right">
       <button class="tb-icon-btn" title="Search (⌘K)" onclick="openPalette()"><span class="ms">search</span></button>
       <button class="tb-icon-btn" title="Notifications" onclick="toggleNotifs()" id="notifBtn">
@@ -1565,7 +1562,8 @@ html.dark .completion-toast { box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1p
         <textarea class="goal-input" id="goalInput"
           placeholder="What would you like the Orchestra to orchestrate today?"
           style="font-size: 15px; min-height: 44px;"
-          oninput="autoExpandGoal(this); updateGoalMeta(this)"></textarea>
+          oninput="autoExpandGoal(this); updateGoalMeta(this)"
+          onkeydown="if(event.key==='Enter' && !event.shiftKey){ event.preventDefault(); submitGoal(); }"></textarea>
         <div class="goal-meta" id="goalMeta">
           <span class="goal-nudge" id="goalNudge">Agents work better with detail</span>
           <span class="goal-char-count" id="goalCharCount">0 / 500</span>
