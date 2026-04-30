@@ -495,7 +495,7 @@ html.dark .io-box { box-shadow: inset 0 1px 0 rgba(255,255,255,0.04); }
   <button class="tb-back" onclick="window.location.href='/'"><span class="ms sm">arrow_back</span> Dashboard</button>
   <div class="tb-divider"></div>
   <div class="tb-title">Agent Trace — API Documentation Workflow</div>
-  <div class="tb-meta" id="tbMeta">Run started 09:41 · 4 agents · 38m elapsed</div>
+  <div class="tb-meta" id="tbMeta">Waiting for live workflow...</div>
   <div class="tb-right">
     <button class="tb-btn" onclick="exportTrace()"><span class="ms sm">download</span> Export</button>
     <button class="tb-btn" onclick="replayTrace()"><span class="ms sm">replay</span> Replay</button>
@@ -512,8 +512,8 @@ html.dark .io-box { box-shadow: inset 0 1px 0 rgba(255,255,255,0.04); }
   <!-- LEFT: Agent Roster -->
   <div class="agent-roster">
     <div class="panel-head">
-      <div class="panel-title">6 Agents</div>
-      <div class="panel-sub" id="rosterSub">All · 4 completed · 1 running</div>
+      <div class="panel-title" id="rosterTitle">0 Agents</div>
+      <div class="panel-sub" id="rosterSub">Waiting for agents...</div>
     </div>
     <div class="roster-list" id="rosterList"></div>
     <div class="handoff-summary">
@@ -1071,6 +1071,7 @@ function connectLiveTrace() {
       
       const isFirst = EVENTS.length === 1;
       
+      updateHeaderStats();
       renderTimeline(activeFilter);
       renderRoster(); // updates load bars / tasks
       
@@ -1097,6 +1098,26 @@ function connectLiveTrace() {
 
 // Start connection
 connectLiveTrace();
+
+// Dynamic header stats
+function updateHeaderStats() {
+  const meta = document.getElementById('tbMeta');
+  const rTitle = document.getElementById('rosterTitle');
+  const rSub = document.getElementById('rosterSub');
+  if(!EVENTS.length) {
+    meta.textContent = 'Waiting for live workflow...';
+    if(rTitle) rTitle.textContent = '0 Agents';
+    rSub.textContent = 'Waiting for agents...';
+    return;
+  }
+  
+  const startTime = EVENTS[0].time;
+  const uniqueAgents = new Set(EVENTS.map(e => e.agent)).size;
+  meta.textContent = `Run started ${startTime} · ${uniqueAgents} agents active`;
+  if(rTitle) rTitle.textContent = `${uniqueAgents} Agents`;
+  rSub.textContent = `${uniqueAgents} agents involved`;
+}
+updateHeaderStats();
 </script>
 </body>
 </html>
