@@ -210,7 +210,7 @@ steps:
     id: 'deploy-orchestrator'
     args:
       - 'run'
-      - '--filename=.'
+      - '--filename=k8s-deployment.yaml'
       - '--image=gcr.io/$PROJECT_ID/multi-agent-orchestrator:$COMMIT_SHA'
       - '--app=multi-agent-orchestrator'
       - '--namespace=default'
