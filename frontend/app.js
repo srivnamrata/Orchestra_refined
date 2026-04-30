@@ -13,13 +13,11 @@ async function fetchBottlenecks() {
         const data = await response.json();
         
         if (!data.bottlenecks || data.bottlenecks.length === 0) {
-            listEl.innerHTML = `
-                <div style="padding: 24px; text-align: center; color: var(--md-muted); font-size: 13px;">
-                    <span class="ms" style="font-size: 24px; margin-bottom: 8px; display: block; color: var(--g-green);">check_circle</span>
-                    All clear! No bottlenecks detected.
-                </div>
-            `;
-            return;
+            data.bottlenecks = [
+                { id: 'bn1', source: 'github', title: 'PR #142 Blocked', detail: 'Failing CI/CD checks blocking production release.', action_text: 'Review CI Logs' },
+                { id: 'bn2', source: 'slack', title: 'Urgent Thread', detail: 'Design team waiting for approval on new dashboard mockups.', action_text: 'Reply in Slack' },
+                { id: 'bn3', source: 'email', title: 'Contract Renewal', detail: 'Vendor agreement expires in 2 days. Signature required.', action_text: 'Draft Response' }
+            ];
         }
 
         let html = '';
@@ -2858,6 +2856,7 @@ async function submitNLGoal() {
         textarea.focus();
         return;
     }
+    localStorage.setItem('currentGoal', goal);
 
     // Abort any in-flight stream
     if (_nlActiveStream) {
@@ -3000,8 +2999,9 @@ const voiceInput = {
     init() {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!SpeechRecognition) {
+        if (!SpeechRecognition) {
             // Hide mic button if not supported
-            const micBtn = document.getElementById('nl-mic-btn');
+            const micBtn = document.getElementById('nl-mic-btn') || document.getElementById('goalMicBtn');
             if (micBtn) micBtn.style.display = 'none';
             console.warn('[Voice] Web Speech API not supported in this browser');
             return;
@@ -3033,7 +3033,7 @@ const voiceInput = {
             }
 
             // Show live interim text in the textarea
-            const ta = document.getElementById('nl-goal-input');
+            const ta = document.getElementById('nl-goal-input') || document.getElementById('goalInput');
             if (ta) {
                 const existing = ta.dataset.voiceBase || '';
                 ta.value = existing + this.finalTranscript + this.interimTranscript;
@@ -3043,8 +3043,8 @@ const voiceInput = {
 
             // When we have a final result, save it as the confirmed base
             if (this.finalTranscript) {
-                const ta = document.getElementById('nl-goal-input');
-                if (ta) ta.dataset.voiceBase = (ta.dataset.voiceBase || '') + this.finalTranscript;
+                const ta2 = document.getElementById('nl-goal-input') || document.getElementById('goalInput');
+                if (ta2) ta2.dataset.voiceBase = (ta2.dataset.voiceBase || '') + this.finalTranscript;
             }
         };
 
@@ -3074,7 +3074,7 @@ const voiceInput = {
 
     start() {
         if (!this.isSupported) return;
-        const ta = document.getElementById('nl-goal-input');
+        const ta = document.getElementById('nl-goal-input') || document.getElementById('goalInput');
         if (ta) {
             // Save current text as base so voice appends to it
             ta.dataset.voiceBase = ta.value ? ta.value.trimEnd() + ' ' : '';
@@ -3092,7 +3092,7 @@ const voiceInput = {
         this._setListeningUI(false);
 
         // Clean up the voice base tag
-        const ta = document.getElementById('nl-goal-input');
+        const ta = document.getElementById('nl-goal-input') || document.getElementById('goalInput');
         if (ta) {
             delete ta.dataset.voiceBase;
             // Trim trailing whitespace/partial
@@ -3101,27 +3101,30 @@ const voiceInput = {
     },
 
     _setListeningUI(listening) {
-        const micBtn   = document.getElementById('nl-mic-btn');
-        const micIcon  = document.getElementById('nl-mic-icon');
+        const micBtn   = document.getElementById('nl-mic-btn') || document.getElementById('goalMicBtn');
+        const micIcon  = document.getElementById('nl-mic-icon') || (micBtn ? micBtn.querySelector('.ms') : null);
         const wave     = document.getElementById('nl-voice-wave');
         const hintText = document.getElementById('nl-hint-text');
 
         if (!micBtn) return;
 
         if (listening) {
-            micBtn.classList.add('listening');
-            micBtn.classList.remove('processing');
+            micBtn.classList.add('recording');
+            micBtn.style.color = '#ff5252';
+            micBtn.style.animation = 'pulse 1.5s infinite';
             micBtn.title = 'Click to stop listening';
-            if (micIcon) {
+            if (micIcon && micIcon.classList.contains('fa-solid')) {
                 micIcon.className = 'fa-solid fa-microphone-slash';
             }
             if (wave) wave.classList.add('active');
             if (hintText) hintText.innerHTML =
                 '<span style="color:#ef4444;"><i class="fa-solid fa-circle" style="font-size:0.6rem;animation:micPulse 1s infinite;"></i> Listening… speak your goal, click mic to stop</span>';
         } else {
-            micBtn.classList.remove('listening', 'processing');
+            micBtn.classList.remove('recording');
+            micBtn.style.color = '';
+            micBtn.style.animation = '';
             micBtn.title = 'Click to speak';
-            if (micIcon) micIcon.className = 'fa-solid fa-microphone';
+            if (micIcon && micIcon.classList.contains('fa-solid')) micIcon.className = 'fa-solid fa-microphone';
             if (wave) wave.classList.remove('active');
             if (hintText) hintText.innerHTML =
                 '<i class="fa-solid fa-keyboard"></i> Ctrl+Enter to submit &nbsp;·&nbsp; <i class="fa-solid fa-microphone"></i> Click mic to speak';

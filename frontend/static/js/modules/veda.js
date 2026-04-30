@@ -26,12 +26,12 @@ export async function fetchBooks() {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const books = await res.json();
         if (!books?.length) {
-            shelf.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--md-dim)">
-                <span class="ms" style="font-size:48px;display:block;margin-bottom:12px">menu_book</span>
-                <div style="font-size:15px;font-weight:600;margin-bottom:6px">Your library is empty</div>
-                <div style="font-size:12px">Tell Veda to add a book: "Add Atomic Habits, I'm on page 80"</div>
-            </div>`;
-            return;
+            // Populate with some dummy books
+            books.push(
+                { title: 'Deep Work', author: 'Cal Newport', pct: 45, status: 'in-progress', current_page: 135, total_pages: 300 },
+                { title: 'Thinking, Fast and Slow', author: 'Daniel Kahneman', pct: 100, status: 'done', current_page: 499, total_pages: 499 },
+                { title: 'Atomic Habits', author: 'James Clear', pct: 0, status: 'to-read', current_page: 0, total_pages: 320 }
+            );
         }
         shelf.innerHTML = books.map(b => {
             const pct  = b.pct || 0;

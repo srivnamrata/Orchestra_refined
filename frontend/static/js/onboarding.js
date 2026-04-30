@@ -168,12 +168,12 @@ window.orchOnboard = {
       if(mainInput) mainInput.value = goalEl.value.trim();
     }
     document.getElementById('orchOnboardOverlay').classList.remove('open');
-    try { localStorage.setItem('orch-onboarded','true'); } catch(e){}
+    try { sessionStorage.setItem('orch-onboarded','true'); } catch(e){}
   }
 };
 
 // Show on first visit
-let done; try { done = localStorage.getItem('orch-onboarded'); } catch(e){}
+let done; try { done = sessionStorage.getItem('orch-onboarded'); } catch(e){}
 if(!done) setTimeout(() => window.orchOnboard.open(), 600);
 
 })();

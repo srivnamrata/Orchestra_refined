@@ -88,7 +88,8 @@ export function dismissBn(id) {
 
 export function reviewBn(btn, type) {
     activityFeed.log(`Reviewing ${type} bottleneck…`, 'status', type.toUpperCase());
-    btn.closest('.bn-item').style.opacity = '0.5';
+    const item = btn.closest('.bn-item') || btn.closest('.notif-card');
+    if (item) item.style.opacity = '0.5';
 }
 
 window.runScan          = runScan;
