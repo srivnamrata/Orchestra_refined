@@ -38,7 +38,7 @@ spec:
     spec:
       containers:
       - name: orchestrator
-        image: gcr.io/PROJECT_ID/multi-agent-orchestrator:latest
+        image: gcr.io/orchestra-project/multi-agent-orchestrator:latest
         ports:
         - containerPort: 8000
           name: http
@@ -127,7 +127,7 @@ spec:
     spec:
       containers:
       - name: task-mcp
-        image: gcr.io/PROJECT_ID/multi-agent-task:latest
+        image: gcr.io/orchestra-project/multi-agent-task:latest
         ports:
         - containerPort: 8001
           name: http
@@ -201,7 +201,7 @@ spec:
     spec:
       containers:
       - name: calendar-mcp
-        image: gcr.io/PROJECT_ID/multi-agent-calendar:latest
+        image: gcr.io/orchestra-project/multi-agent-calendar:latest
         ports:
         - containerPort: 8002
           name: http
@@ -275,7 +275,7 @@ spec:
     spec:
       containers:
       - name: notes-mcp
-        image: gcr.io/PROJECT_ID/multi-agent-notes:latest
+        image: gcr.io/orchestra-project/multi-agent-notes:latest
         ports:
         - containerPort: 8003
           name: http
@@ -349,7 +349,7 @@ spec:
     spec:
       containers:
       - name: critic-mcp
-        image: gcr.io/PROJECT_ID/multi-agent-critic:latest
+        image: gcr.io/orchestra-project/multi-agent-critic:latest
         ports:
         - containerPort: 8004
           name: http
@@ -423,7 +423,7 @@ spec:
     spec:
       containers:
       - name: auditor-mcp
-        image: gcr.io/PROJECT_ID/multi-agent-auditor:latest
+        image: gcr.io/orchestra-project/multi-agent-auditor:latest
         ports:
         - containerPort: 8005
           name: http
@@ -497,7 +497,7 @@ spec:
     spec:
       containers:
       - name: event-monitor-mcp
-        image: gcr.io/PROJECT_ID/multi-agent-event-monitor:latest
+        image: gcr.io/orchestra-project/multi-agent-event-monitor:latest
         ports:
         - containerPort: 8006
           name: http
@@ -571,7 +571,7 @@ spec:
     spec:
       containers:
       - name: research-mcp
-        image: gcr.io/PROJECT_ID/multi-agent-research:latest
+        image: gcr.io/orchestra-project/multi-agent-research:latest
         ports:
         - containerPort: 8007
           name: http
@@ -645,7 +645,7 @@ spec:
     spec:
       containers:
       - name: news-mcp
-        image: gcr.io/PROJECT_ID/multi-agent-news:latest
+        image: gcr.io/orchestra-project/multi-agent-news:latest
         ports:
         - containerPort: 8008
           name: http
